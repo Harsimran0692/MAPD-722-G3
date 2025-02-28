@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 import 'package:frontend/models/patients.dart';
 import 'package:frontend/widgets/patient_card.dart';
@@ -36,7 +38,8 @@ class _HomeScreenState extends State<HomeScreen> {
       final fetchedPatients = await patientService.fetchData();
       setState(() {
         patients = fetchedPatients;
-        filteredPatients = patients;
+        filteredPatients = List.from(patients); // Create a new list copy
+        filterPatients(); // Apply initial filtering
       });
     } catch (e) {
       ScaffoldMessenger.of(
@@ -50,11 +53,19 @@ class _HomeScreenState extends State<HomeScreen> {
     setState(() {
       filteredPatients =
           patients.where((patient) {
+            // Handle null status safely
+            final patientStatus = patient["status"]?.toString() ?? "";
             final matchesStatus =
-                filterStatus == "All" || patient["status"] == filterStatus;
-            final matchesName = patient["name"].toLowerCase().contains(
-              searchQuery.toLowerCase(),
-            );
+                filterStatus == "All" ||
+                patientStatus.toLowerCase() == filterStatus.toLowerCase();
+
+            // Handle null name safely and ensure search works
+            final patientName = patient["patientId"]["name"]?.toString() ?? "";
+            final matchesName =
+                searchQuery.isEmpty || // Return true if search is empty
+                patientName.toLowerCase().contains(
+                  searchQuery.trim().toLowerCase(),
+                );
             return matchesStatus && matchesName;
           }).toList();
     });
