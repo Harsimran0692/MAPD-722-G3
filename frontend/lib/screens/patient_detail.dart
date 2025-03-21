@@ -1,4 +1,13 @@
 import 'package:flutter/material.dart';
+import '../widgets/patient_header.dart';
+import '../widgets/patient_section.dart';
+import '../widgets/patient_info_row.dart';
+import '../widgets/doctor_note_tile.dart';
+import '../widgets/patient_history_row.dart';
+import '../widgets/edit_patient_dialog.dart';
+import '../widgets/add_note_dialog.dart';
+import '../widgets/update_note_dialog.dart';
+import '../widgets/add_history_dialog.dart';
 
 class PatientDetail extends StatefulWidget {
   final Map<String, dynamic> patient;
@@ -10,581 +19,374 @@ class PatientDetail extends StatefulWidget {
 }
 
 class _PatientDetailState extends State<PatientDetail> {
+  late Map<String, dynamic> patientData;
+
+  @override
+  void initState() {
+    super.initState();
+    patientData = Map.from(widget.patient); // Initialize with passed data
+  }
+
+  // Simulate an API call to fetch updated patient data
+  Future<void> _fetchPatientData() async {
+    await Future.delayed(const Duration(seconds: 1)); // Simulate network delay
+    final updatedData = Map<String, dynamic>.from(widget.patient);
+    updatedData["doctorNotes"] = updatedData["doctorNotes"] ?? [];
+    updatedData["status"] = "Stable"; // Example change from API
+
+    setState(() {
+      patientData = updatedData;
+    });
+  }
+
+  // Show confirmation dialog for deletion
+  Future<void> _confirmDeletePatient(BuildContext context) async {
+    final bool? confirmed = await showDialog<bool>(
+      context: context,
+      builder:
+          (context) => AlertDialog(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+            ),
+            title: const Text(
+              "Delete Patient",
+              style: TextStyle(
+                fontFamily: 'Poppins',
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF0277BD),
+              ),
+            ),
+            content: const Text(
+              "Are you sure you want to permanently delete this patient? This action cannot be undone.",
+              style: TextStyle(fontSize: 16),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context, false), // Cancel
+                child: const Text(
+                  "Cancel",
+                  style: TextStyle(color: Colors.grey),
+                ),
+              ),
+              ElevatedButton(
+                onPressed: () => Navigator.pop(context, true), // Confirm
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.red,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                child: const Text(
+                  "Delete",
+                  style: TextStyle(color: Colors.white),
+                ),
+              ),
+            ],
+          ),
+    );
+
+    if (confirmed == true) {
+      _deletePatient();
+    }
+  }
+
+  // Simulate patient deletion (replace with actual API call)
+  void _deletePatient() {
+    // In a real app, call an API here to delete the patient, e.g.:
+    // await patientService.deletePatient(patientData["patientId"]["id"]);
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text("Patient deleted successfully")),
+    );
+    Navigator.pop(context); // Return to HomeScreen after deletion
+  }
+
   @override
   Widget build(BuildContext context) {
-    final patient = widget.patient;
-    final name = patient["patientId"]["name"] as String? ?? 'Unknown';
-    final age = patient["patientId"]["age"]?.toString() ?? 'N/A';
-    final gender = patient["patientId"]["gender"] as String? ?? 'N/A';
-    final email = patient["patientId"]["email"] as String? ?? 'N/A';
-    final dob = patient["patientId"]["dob"] as String? ?? 'N/A';
-    final status = patient["status"] as String? ?? 'Unknown';
-    final systolicPressure = patient["systolicPressure"]?.toString() ?? 'N/A';
-    final diastolicPressure = patient["diastolicPressure"]?.toString() ?? 'N/A';
-    final respirationRate = patient["respirationRate"]?.toString() ?? 'N/A';
-    final bloodOxygenation = patient["bloodOxygenation"]?.toString() ?? 'N/A';
-    final heartRate = patient["heartRate"]?.toString() ?? 'N/A';
-    final doctorNotes = patient["doctorNotes"] as List<dynamic>? ?? [];
+    final doctorNotes = patientData["doctorNotes"] as List<dynamic>? ?? [];
+    final patientHistory = [
+      {
+        "date": "2025-02-20",
+        "status": "Stable",
+        "bp": "118/78 mmHg",
+        "oxygen": "95%",
+        "hr": "70 bpm",
+      },
+      {
+        "date": "2025-02-15",
+        "status": "Critical",
+        "bp": "170/100 mmHg",
+        "oxygen": "85%",
+        "hr": "105 bpm",
+      },
+      {
+        "date": "2025-02-10",
+        "status": "Recovering",
+        "bp": "130/85 mmHg",
+        "oxygen": "92%",
+        "hr": "82 bpm",
+      },
+    ];
 
     return Scaffold(
+      extendBodyBehindAppBar: true,
       appBar: AppBar(
         title: Text(
-          name,
+          patientData["patientId"]["name"] as String? ?? 'Unknown',
           style: const TextStyle(
+            fontFamily: 'Poppins',
+            fontSize: 26,
+            fontWeight: FontWeight.w600,
             color: Colors.white,
-            fontSize: 24,
-            fontWeight: FontWeight.bold,
           ),
         ),
         backgroundColor: Colors.transparent,
         elevation: 0,
         flexibleSpace: Container(
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              colors: [Colors.teal, Colors.cyan],
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              colors: [Color(0xFF00C4B4), Color(0xFF0288D1)],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.2),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
+              ),
+            ],
           ),
         ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.edit, color: Colors.white),
-            onPressed: () {
-              // Placeholder for update dialog
-              showDialog(
-                context: context,
-                builder: (context) {
-                  return AlertDialog(
-                    title: const Text('Update Patient Data'),
-                    content: SingleChildScrollView(
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          DropdownButtonFormField<String>(
-                            value: status,
-                            items:
-                                ['Stable', 'Critical', 'Recovering'].map((
-                                  status,
-                                ) {
-                                  return DropdownMenuItem(
-                                    value: status,
-                                    child: Text(status),
-                                  );
-                                }).toList(),
-                            onChanged: null, // Disabled for UI-only
-                            decoration: const InputDecoration(
-                              labelText: 'Status',
-                            ),
-                          ),
-                          TextField(
-                            controller: TextEditingController(
-                              text: systolicPressure,
-                            ),
-                            keyboardType: TextInputType.number,
-                            decoration: const InputDecoration(
-                              labelText: 'Systolic Pressure (mmHg)',
-                            ),
-                            enabled: false, // Disabled for UI-only
-                          ),
-                          TextField(
-                            controller: TextEditingController(
-                              text: diastolicPressure,
-                            ),
-                            keyboardType: TextInputType.number,
-                            decoration: const InputDecoration(
-                              labelText: 'Diastolic Pressure (mmHg)',
-                            ),
-                            enabled: false,
-                          ),
-                          TextField(
-                            controller: TextEditingController(
-                              text: respirationRate,
-                            ),
-                            keyboardType: TextInputType.number,
-                            decoration: const InputDecoration(
-                              labelText: 'Respiration Rate (breaths/min)',
-                            ),
-                            enabled: false,
-                          ),
-                          TextField(
-                            controller: TextEditingController(
-                              text: bloodOxygenation,
-                            ),
-                            keyboardType: TextInputType.number,
-                            decoration: const InputDecoration(
-                              labelText: 'Blood Oxygenation (%)',
-                            ),
-                            enabled: false,
-                          ),
-                          TextField(
-                            controller: TextEditingController(text: heartRate),
-                            keyboardType: TextInputType.number,
-                            decoration: const InputDecoration(
-                              labelText: 'Heart Rate (bpm)',
-                            ),
-                            enabled: false,
-                          ),
-                        ],
+            icon: const Icon(Icons.edit, color: Colors.white, size: 28),
+            onPressed:
+                () => showDialog(
+                  context: context,
+                  builder:
+                      (_) => EditPatientDialog(
+                        patientData: patientData,
+                        onSave: _updatePatientData,
                       ),
-                    ),
-                    actions: [
-                      TextButton(
-                        onPressed: () => Navigator.pop(context),
-                        child: const Text(
-                          'Cancel',
-                          style: TextStyle(color: Colors.teal),
-                        ),
-                      ),
-                      ElevatedButton(
-                        onPressed:
-                            () => Navigator.pop(context), // Placeholder action
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.teal,
-                        ),
-                        child: const Text(
-                          'Save',
-                          style: TextStyle(color: Colors.white),
-                        ),
-                      ),
-                    ],
-                  );
-                },
-              );
-            },
+                ),
+          ),
+          IconButton(
+            icon: const Icon(Icons.delete, color: Colors.white, size: 28),
+            onPressed: () => _confirmDeletePatient(context),
           ),
         ],
       ),
       body: Container(
         decoration: const BoxDecoration(
           gradient: LinearGradient(
-            colors: [Colors.tealAccent, Colors.white],
+            colors: [Color(0xFFE0F7FA), Colors.white],
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
           ),
         ),
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: SingleChildScrollView(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Header with Avatar
-                Row(
+        child: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.all(20.0),
+            child: RefreshIndicator(
+              onRefresh: _fetchPatientData,
+              color: const Color(0xFF00C4B4),
+              child: SingleChildScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    CircleAvatar(
-                      radius: 40,
-                      backgroundColor: Colors.amber,
-                      child: Text(
-                        name.isNotEmpty ? name[0].toUpperCase() : '?',
-                        style: const TextStyle(
-                          fontSize: 36,
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
+                    PatientHeader(patientData: patientData),
+                    const SizedBox(height: 30),
+                    PatientSection(
+                      title: "Patient Information",
+                      icon: Icons.person,
+                      content: [
+                        PatientInfoRow(
+                          icon: Icons.cake,
+                          label: "Age",
+                          value:
+                              patientData["patientId"]["dob"] != null
+                                  ? "${DateTime.now().year - DateTime.parse(patientData["patientId"]["dob"]).year}"
+                                  : 'N/A',
                         ),
-                      ),
+                        PatientInfoRow(
+                          icon: Icons.transgender,
+                          label: "Gender",
+                          value:
+                              patientData["patientId"]["gender"] as String? ??
+                              'N/A',
+                        ),
+                        PatientInfoRow(
+                          icon: Icons.email,
+                          label: "Email",
+                          value:
+                              patientData["patientId"]["email"] as String? ??
+                              'N/A',
+                        ),
+                        PatientInfoRow(
+                          icon: Icons.calendar_today,
+                          label: "Date of Birth",
+                          value:
+                              patientData["patientId"]["dob"] as String? ??
+                              'N/A',
+                        ),
+                      ],
                     ),
-                    const SizedBox(width: 16),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          name,
-                          style: const TextStyle(
-                            fontSize: 28,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.teal,
+                    PatientSection(
+                      title: "Clinical Data",
+                      icon: Icons.local_hospital,
+                      content: [
+                        PatientInfoRow(
+                          icon: Icons.favorite,
+                          label: "Blood Pressure",
+                          value:
+                              "${patientData["systolicPressure"]?.toString() ?? 'N/A'}/${patientData["diastolicPressure"]?.toString() ?? 'N/A'} mmHg",
+                        ),
+                        PatientInfoRow(
+                          icon: Icons.air,
+                          label: "Respiration Rate",
+                          value:
+                              "${patientData["respirationRate"]?.toString() ?? 'N/A'} breaths/min",
+                        ),
+                        PatientInfoRow(
+                          icon: Icons.opacity,
+                          label: "Blood Oxygenation",
+                          value:
+                              "${patientData["bloodOxygenation"]?.toString() ?? 'N/A'}%",
+                        ),
+                        PatientInfoRow(
+                          icon: Icons.monitor_heart,
+                          label: "Heart Rate",
+                          value:
+                              "${patientData["heartRate"]?.toString() ?? 'N/A'} bpm",
+                        ),
+                      ],
+                    ),
+                    PatientSection(
+                      title: "Doctor Notes",
+                      icon: Icons.note,
+                      content: [
+                        if (doctorNotes.isEmpty)
+                          const Padding(
+                            padding: EdgeInsets.all(16.0),
+                            child: Text(
+                              "No notes available.",
+                              style: TextStyle(
+                                fontSize: 16,
+                                color: Colors.grey,
+                              ),
+                            ),
+                          )
+                        else
+                          ...doctorNotes.map(
+                            (note) => DoctorNoteTile(
+                              note: note,
+                              onUpdate:
+                                  () => _showUpdateNoteDialog(context, note),
+                              onDelete: () => _deleteNote(note),
+                            ),
+                          ),
+                        Padding(
+                          padding: const EdgeInsets.only(top: 8.0),
+                          child: ElevatedButton.icon(
+                            icon: const Icon(Icons.add, size: 18),
+                            label: const Text("Add Note"),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFF00C4B4),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                            onPressed:
+                                () => showDialog(
+                                  context: context,
+                                  builder:
+                                      (_) => AddNoteDialog(onAdd: _addNote),
+                                ),
                           ),
                         ),
-                        Text(
-                          "Status: $status",
-                          style: TextStyle(
-                            fontSize: 18,
-                            color: Color(
-                              status == "Stable"
-                                  ? 0xFF006400
-                                  : status == "Critical"
-                                  ? 0xFFFF0000
-                                  : 0xFFFFA500,
+                      ],
+                    ),
+                    PatientSection(
+                      title: "Patient History",
+                      icon: Icons.history,
+                      content: [
+                        ...patientHistory.map(
+                          (history) => PatientHistoryRow(history: history),
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.only(top: 8.0),
+                          child: ElevatedButton.icon(
+                            icon: const Icon(Icons.add, size: 18),
+                            label: const Text("Add History"),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFF00C4B4),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
                             ),
-                            fontWeight: FontWeight.bold,
+                            onPressed:
+                                () => showDialog(
+                                  context: context,
+                                  builder:
+                                      (_) =>
+                                          AddHistoryDialog(onAdd: _addHistory),
+                                ),
                           ),
                         ),
                       ],
                     ),
                   ],
                 ),
-                const SizedBox(height: 24),
-
-                // Patient Info Section
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    _buildSectionTitle("Patient Information", Icons.person),
-                    IconButton(
-                      icon: const Icon(Icons.edit, color: Colors.amber),
-                      onPressed: () {}, // Placeholder for editing patient info
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 10),
-                Card(
-                  elevation: 6,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: Container(
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [Colors.white, Colors.teal.withOpacity(0.1)],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: Padding(
-                      padding: const EdgeInsets.all(16.0),
-                      child: Column(
-                        children: [
-                          _buildInfoRow(Icons.cake, "Age", age),
-                          _buildInfoRow(Icons.transgender, "Gender", gender),
-                          _buildInfoRow(Icons.email, "Email", email),
-                          _buildInfoRow(
-                            Icons.calendar_today,
-                            "Date of Birth",
-                            dob,
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 24),
-
-                // Clinical Data Section
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    _buildSectionTitle("Clinical Data", Icons.local_hospital),
-                    IconButton(
-                      icon: const Icon(Icons.edit, color: Colors.amber),
-                      onPressed: () {}, // Placeholder for editing clinical data
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 10),
-                Card(
-                  elevation: 6,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: Container(
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [Colors.white, Colors.teal.withOpacity(0.1)],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: Padding(
-                      padding: const EdgeInsets.all(16.0),
-                      child: Column(
-                        children: [
-                          _buildInfoRow(
-                            Icons.favorite,
-                            "Blood Pressure",
-                            "$systolicPressure/$diastolicPressure mmHg",
-                          ),
-                          _buildInfoRow(
-                            Icons.air,
-                            "Respiration Rate",
-                            "$respirationRate breaths/min",
-                          ),
-                          _buildInfoRow(
-                            Icons.opacity,
-                            "Blood Oxygenation",
-                            "$bloodOxygenation%",
-                          ),
-                          _buildInfoRow(
-                            Icons.monitor_heart,
-                            "Heart Rate",
-                            "$heartRate bpm",
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 24),
-
-                // Doctor Notes Section
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    _buildSectionTitle("Doctor Notes", Icons.note),
-                    IconButton(
-                      icon: const Icon(Icons.edit, color: Colors.amber),
-                      onPressed: () {}, // Placeholder for editing doctor notes
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 10),
-                doctorNotes.isEmpty
-                    ? Card(
-                      elevation: 2,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                      child: Container(
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            colors: [
-                              Colors.white,
-                              Colors.teal.withOpacity(0.1),
-                            ],
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                          ),
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                        child: const Padding(
-                          padding: EdgeInsets.all(16.0),
-                          child: Text(
-                            "No notes available.",
-                            style: TextStyle(fontSize: 16, color: Colors.grey),
-                          ),
-                        ),
-                      ),
-                    )
-                    : ListView.builder(
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      itemCount: doctorNotes.length,
-                      itemBuilder: (context, index) {
-                        final note = doctorNotes[index];
-                        return Card(
-                          elevation: 2,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          color: Colors.teal.withOpacity(0.2),
-                          child: Padding(
-                            padding: const EdgeInsets.all(12.0),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Row(
-                                  children: [
-                                    const Icon(
-                                      Icons.note_alt,
-                                      size: 20,
-                                      color: Colors.teal,
-                                    ),
-                                    const SizedBox(width: 8),
-                                    Expanded(
-                                      child: Text(
-                                        note["note"] as String? ??
-                                            'No note text',
-                                        style: const TextStyle(
-                                          fontSize: 16,
-                                          fontWeight: FontWeight.w500,
-                                          color: Colors.black87,
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  "Added: ${note["createdAt"] as String? ?? 'N/A'}",
-                                  style: const TextStyle(
-                                    fontSize: 14,
-                                    color: Colors.grey,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        );
-                      },
-                    ),
-
-                // Patient History Section
-                const SizedBox(height: 24),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    _buildSectionTitle("Patient History", Icons.history),
-                    IconButton(
-                      icon: const Icon(Icons.edit, color: Colors.amber),
-                      onPressed: () {}, // Placeholder for editing history
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 10),
-                Card(
-                  elevation: 6,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: Container(
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [Colors.white, Colors.teal.withOpacity(0.1)],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: Padding(
-                      padding: const EdgeInsets.all(16.0),
-                      child: Column(
-                        children: [
-                          _buildHistoryRow(
-                            "2025-02-20",
-                            "Stable",
-                            "118/78 mmHg",
-                            "95%",
-                            "70 bpm",
-                          ),
-                          const Divider(color: Colors.teal),
-                          _buildHistoryRow(
-                            "2025-02-15",
-                            "Critical",
-                            "170/100 mmHg",
-                            "85%",
-                            "105 bpm",
-                          ),
-                          const Divider(color: Colors.teal),
-                          _buildHistoryRow(
-                            "2025-02-10",
-                            "Recovering",
-                            "130/85 mmHg",
-                            "92%",
-                            "82 bpm",
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  // Helper method for section titles
-  Widget _buildSectionTitle(String title, IconData icon) {
-    return Row(
-      children: [
-        Icon(icon, color: Colors.teal, size: 28),
-        const SizedBox(width: 8),
-        Text(
-          title,
-          style: const TextStyle(
-            fontSize: 22,
-            fontWeight: FontWeight.bold,
-            color: Colors.teal,
-          ),
-        ),
-      ],
-    );
-  }
-
-  // Helper method for info rows
-  Widget _buildInfoRow(IconData icon, String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8.0),
-      child: Row(
-        children: [
-          Icon(icon, color: Colors.teal, size: 24),
-          const SizedBox(width: 12),
-          Expanded(
-            child: RichText(
-              text: TextSpan(
-                children: [
-                  TextSpan(
-                    text: "$label: ",
-                    style: const TextStyle(
-                      fontSize: 18,
-                      color: Colors.black87,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  TextSpan(
-                    text: value,
-                    style: const TextStyle(fontSize: 18, color: Colors.black54),
-                  ),
-                ],
               ),
             ),
           ),
-        ],
+        ),
       ),
     );
   }
 
-  // Helper method for history rows (static UI)
-  Widget _buildHistoryRow(
-    String date,
-    String status,
-    String bp,
-    String oxygen,
-    String hr,
-  ) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8.0),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Icon(Icons.history, color: Colors.teal, size: 24),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  "Date: $date",
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.black87,
-                  ),
-                ),
-                Text(
-                  "Status: $status",
-                  style: TextStyle(
-                    fontSize: 16,
-                    color: Color(
-                      status == "Stable"
-                          ? 0xFF006400
-                          : status == "Critical"
-                          ? 0xFFFF0000
-                          : 0xFFFFA500,
-                    ),
-                  ),
-                ),
-                Text(
-                  "Blood Pressure: $bp",
-                  style: const TextStyle(fontSize: 16, color: Colors.black54),
-                ),
-                Text(
-                  "Oxygen: $oxygen",
-                  style: const TextStyle(fontSize: 16, color: Colors.black54),
-                ),
-                Text(
-                  "Heart Rate: $hr",
-                  style: const TextStyle(fontSize: 16, color: Colors.black54),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
+  void _updatePatientData(Map<String, dynamic> updatedData) {
+    setState(() => patientData = updatedData);
+  }
+
+  void _addNote(String note) {
+    setState(() {
+      patientData["doctorNotes"].add({
+        "note": note,
+        "createdAt": DateTime.now().toString(),
+      });
+    });
+  }
+
+  void _addHistory(Map<String, String> history) {
+    // For demo, history is static; implement dynamic storage as needed
+  }
+
+  void _showUpdateNoteDialog(BuildContext context, dynamic note) {
+    showDialog(
+      context: context,
+      builder: (_) => UpdateNoteDialog(note: note, onUpdate: _updateNote),
     );
+  }
+
+  void _updateNote(dynamic note, String updatedText) {
+    setState(() {
+      note["note"] = updatedText;
+      note["createdAt"] = DateTime.now().toString();
+    });
+  }
+
+  void _deleteNote(dynamic note) {
+    setState(() {
+      patientData["doctorNotes"].remove(note);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Note deleted"),
+          duration: Duration(seconds: 2),
+        ),
+      );
+    });
   }
 }
