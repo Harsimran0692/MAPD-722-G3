@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart'; // For input filtering
 import 'package:intl/intl.dart'; // For date formatting
 import 'package:frontend/models/patients.dart'; // Adjust import based on your project structure
 
@@ -17,47 +16,61 @@ class AddPatientDialog extends StatefulWidget {
   State<AddPatientDialog> createState() => _AddPatientDialogState();
 }
 
-class _AddPatientDialogState extends State<AddPatientDialog> {
+class _AddPatientDialogState extends State<AddPatientDialog>
+    with SingleTickerProviderStateMixin {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
   final _emailController = TextEditingController();
-  final _systolicController = TextEditingController();
-  final _diastolicController = TextEditingController();
-  final _respirationController = TextEditingController();
-  final _oxygenController = TextEditingController();
-  final _heartRateController = TextEditingController();
   DateTime? _selectedDob;
   String _selectedGender = 'Male'; // Default value
+  late AnimationController _animationController;
+  late Animation<double> _fadeAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _animationController = AnimationController(
+      duration: const Duration(milliseconds: 300),
+      vsync: this,
+    );
+    _fadeAnimation = Tween<double>(begin: 0, end: 1).animate(
+      CurvedAnimation(parent: _animationController, curve: Curves.easeInOut),
+    );
+    _animationController.forward();
+  }
 
   @override
   void dispose() {
     _nameController.dispose();
     _emailController.dispose();
-    _systolicController.dispose();
-    _diastolicController.dispose();
-    _respirationController.dispose();
-    _oxygenController.dispose();
-    _heartRateController.dispose();
+    _animationController.dispose();
     super.dispose();
   }
 
   Future<void> _selectDob(BuildContext context) async {
+    final DateTime now = DateTime.now();
+    final DateTime yesterday = now.subtract(
+      const Duration(days: 1),
+    ); // Set to yesterday
     final DateTime? picked = await showDatePicker(
       context: context,
-      initialDate:
-          _selectedDob ??
-          DateTime.now().subtract(
-            const Duration(days: 365 * 18),
-          ), // Default to 18 years ago
+      initialDate: _selectedDob ?? now.subtract(const Duration(days: 365 * 18)),
       firstDate: DateTime(1900),
-      lastDate: DateTime.now(),
+      lastDate: yesterday, // Set last selectable date to yesterday
+      selectableDayPredicate: (DateTime date) {
+        // Disable all dates from today onward
+        return date.isBefore(now);
+      },
       builder:
           (context, child) => Theme(
             data: ThemeData.light().copyWith(
-              colorScheme: const ColorScheme.light(primary: Color(0xFF00C4B4)),
+              colorScheme: const ColorScheme.light(primary: Colors.teal),
               buttonTheme: const ButtonThemeData(
                 textTheme: ButtonTextTheme.primary,
               ),
+              disabledColor: Colors.grey.withOpacity(
+                0.5,
+              ), // Visually disable future dates
             ),
             child: child!,
           ),
@@ -69,230 +82,249 @@ class _AddPatientDialogState extends State<AddPatientDialog> {
     }
   }
 
+  int _calculateAge(DateTime dob) {
+    final now = DateTime.now();
+    int age = now.year - dob.year;
+    if (now.month < dob.month ||
+        (now.month == dob.month && now.day < dob.day)) {
+      age--;
+    }
+    return age;
+  }
+
   @override
   Widget build(BuildContext context) {
-    return AlertDialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-      title: const Text(
-        'Add New Patient',
-        style: TextStyle(
-          fontFamily: 'Poppins',
-          fontWeight: FontWeight.bold,
-          color: Color(0xFF0277BD),
-        ),
-      ),
-      content: SingleChildScrollView(
-        child: Form(
-          key: _formKey,
+    return FadeTransition(
+      opacity: _fadeAnimation,
+      child: Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        elevation: 10,
+        backgroundColor: Colors.white,
+        child: Container(
+          constraints: BoxConstraints(
+            maxWidth: 400,
+            maxHeight: MediaQuery.of(context).size.height * 0.8,
+          ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              _buildTextField(
-                _nameController,
-                "Name",
-                Icons.person,
-                validator:
-                    (value) => value!.isEmpty ? 'Name is required' : null,
-              ),
-              _buildDobField(context),
-              DropdownButtonFormField<String>(
-                value: _selectedGender,
-                decoration: _inputDecoration("Gender", Icons.transgender),
-                items:
-                    ['Male', 'Female', 'Other']
-                        .map(
-                          (gender) => DropdownMenuItem(
-                            value: gender,
-                            child: Text(gender),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(16),
+                decoration: const BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [Colors.teal, Color.fromRGBO(0, 50, 17, 1)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.person_add, color: Colors.white, size: 28),
+                    const SizedBox(width: 12),
+                    Text(
+                      'Add New Patient',
+                      style: TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                        shadows: [
+                          Shadow(
+                            color: Colors.black26,
+                            blurRadius: 4,
+                            offset: Offset(2, 2),
                           ),
-                        )
-                        .toList(),
-                onChanged: (value) => setState(() => _selectedGender = value!),
-                validator:
-                    (value) => value == null ? 'Gender is required' : null,
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
               ),
-              _buildTextField(
-                _emailController,
-                "Email",
-                Icons.email,
-                keyboardType: TextInputType.emailAddress,
-                validator:
-                    (value) =>
-                        value!.isEmpty
-                            ? 'Email is required'
-                            : !value.contains('@')
-                            ? 'Enter a valid email'
-                            : null,
+              Flexible(
+                child: SingleChildScrollView(
+                  child: Padding(
+                    padding: const EdgeInsets.all(20),
+                    child: Form(
+                      key: _formKey,
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          _buildTextField(
+                            _nameController,
+                            "Name",
+                            Icons.person,
+                            validator: (value) {
+                              if (value == null || value.isEmpty) {
+                                return 'Name is required';
+                              }
+                              if (value.length < 2) {
+                                return 'Name must be at least 2 characters long';
+                              }
+                              if (!RegExp(r'^[a-zA-Z\s]+$').hasMatch(value)) {
+                                return 'Name must contain only letters and spaces';
+                              }
+                              return null;
+                            },
+                          ),
+                          _buildDobField(context),
+                          DropdownButtonFormField<String>(
+                            value: _selectedGender,
+                            decoration: _inputDecoration(
+                              "Gender",
+                              Icons.transgender,
+                            ),
+                            items:
+                                ['Male', 'Female', 'Other']
+                                    .map(
+                                      (gender) => DropdownMenuItem(
+                                        value: gender,
+                                        child: Text(
+                                          gender,
+                                          style: const TextStyle(fontSize: 16),
+                                        ),
+                                      ),
+                                    )
+                                    .toList(),
+                            onChanged:
+                                (value) =>
+                                    setState(() => _selectedGender = value!),
+                            validator:
+                                (value) =>
+                                    value == null ? 'Gender is required' : null,
+                            dropdownColor: Colors.white,
+                            style: const TextStyle(color: Colors.black87),
+                            icon: const Icon(
+                              Icons.arrow_drop_down,
+                              color: Colors.teal,
+                            ),
+                          ),
+                          _buildTextField(
+                            _emailController,
+                            "Email",
+                            Icons.email,
+                            keyboardType: TextInputType.emailAddress,
+                            validator: (value) {
+                              if (value == null || value.isEmpty) {
+                                return 'Email is required';
+                              }
+                              if (!RegExp(
+                                r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$',
+                              ).hasMatch(value)) {
+                                return 'Enter a valid email';
+                              }
+                              return null;
+                            },
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
               ),
-              _buildTextField(
-                _systolicController,
-                "Systolic Pressure (mmHg)",
-                Icons.favorite,
-                keyboardType: TextInputType.number,
-                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                validator: (value) {
-                  if (value == null || value.isEmpty)
-                    return "Systolic BP is required";
-                  final systolic = int.tryParse(value);
-                  if (systolic == null) return "Must be a number";
-                  if (systolic < 50 || systolic > 300)
-                    return "Must be between 50-300";
-                  return null;
-                },
-              ),
-              _buildTextField(
-                _diastolicController,
-                "Diastolic Pressure (mmHg)",
-                Icons.favorite_border,
-                keyboardType: TextInputType.number,
-                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                validator: (value) {
-                  if (value == null || value.isEmpty)
-                    return "Diastolic BP is required";
-                  final diastolic = int.tryParse(value);
-                  if (diastolic == null) return "Must be a number";
-                  if (diastolic < 30 || diastolic > 200)
-                    return "Must be between 30-200";
-                  final systolic = int.tryParse(_systolicController.text);
-                  if (systolic != null &&
-                      diastolic != null &&
-                      systolic <= diastolic) {
-                    return "Systolic must be greater than Diastolic";
-                  }
-                  return null;
-                },
-              ),
-              _buildTextField(
-                _respirationController,
-                "Respiration Rate (breaths/min)",
-                Icons.air,
-                keyboardType: TextInputType.number,
-                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                validator: (value) {
-                  if (value == null || value.isEmpty)
-                    return "Respiration Rate is required";
-                  final respiration = int.tryParse(value);
-                  if (respiration == null) return "Must be a number";
-                  if (respiration < 5 || respiration > 60)
-                    return "Must be between 5-60";
-                  return null;
-                },
-              ),
-              _buildTextField(
-                _oxygenController,
-                "Blood Oxygenation (%)",
-                Icons.opacity,
-                keyboardType: TextInputType.number,
-                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                validator: (value) {
-                  if (value == null || value.isEmpty)
-                    return "Oxygen level is required";
-                  final oxygen = int.tryParse(value);
-                  if (oxygen == null) return "Must be a number";
-                  if (oxygen < 0 || oxygen > 100)
-                    return "Must be between 0-100";
-                  return null;
-                },
-              ),
-              _buildTextField(
-                _heartRateController,
-                "Heart Rate (bpm)",
-                Icons.monitor_heart,
-                keyboardType: TextInputType.number,
-                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                validator: (value) {
-                  if (value == null || value.isEmpty)
-                    return "Heart Rate is required";
-                  final hr = int.tryParse(value);
-                  if (hr == null) return "Must be a number";
-                  if (hr < 20 || hr > 250) return "Must be between 20-250";
-                  return null;
-                },
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(context),
+                      child: const Text(
+                        'Cancel',
+                        style: TextStyle(color: Colors.grey, fontSize: 16),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    ElevatedButton(
+                      onPressed: () async {
+                        if (_formKey.currentState!.validate() &&
+                            _selectedDob != null) {
+                          try {
+                            final patientData = {
+                              "name": _nameController.text.trim(),
+                              "dob": DateFormat(
+                                'yyyy-MM-dd',
+                              ).format(_selectedDob!),
+                              "gender": _selectedGender,
+                              "email": _emailController.text.trim(),
+                              "age": _calculateAge(_selectedDob!),
+                            };
+                            await widget.patientService.addPatient(patientData);
+                            widget.fetchPatients(); // Refresh patient list
+                            Navigator.pop(context);
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Patient added successfully'),
+                                backgroundColor: Colors.teal,
+                                duration: Duration(seconds: 2),
+                              ),
+                            );
+                          } catch (e) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text('Failed to add patient: $e'),
+                                backgroundColor: Colors.red,
+                                duration: const Duration(seconds: 3),
+                              ),
+                            );
+                          }
+                        } else if (_selectedDob == null) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Please select a date of birth'),
+                              backgroundColor: Colors.orange,
+                              duration: Duration(seconds: 2),
+                            ),
+                          );
+                        }
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.teal,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 20,
+                          vertical: 12,
+                        ),
+                        elevation: 4,
+                        shadowColor: Colors.teal.withOpacity(0.5),
+                      ),
+                      child: const Text(
+                        'Add Patient',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ],
           ),
         ),
       ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: const Text('Cancel', style: TextStyle(color: Colors.grey)),
-        ),
-        ElevatedButton(
-          onPressed: () async {
-            if (_formKey.currentState!.validate() && _selectedDob != null) {
-              try {
-                final newPatient = {
-                  "patientId": {
-                    "name": _nameController.text,
-                    "dob": DateFormat('yyyy-MM-dd').format(_selectedDob!),
-                    "gender": _selectedGender,
-                    "email": _emailController.text,
-                  },
-                  "status": "Stable", // Default status
-                  "systolicPressure": int.parse(_systolicController.text),
-                  "diastolicPressure": int.parse(_diastolicController.text),
-                  "respirationRate": int.parse(_respirationController.text),
-                  "bloodOxygenation": int.parse(_oxygenController.text),
-                  "heartRate": int.parse(_heartRateController.text),
-                  "doctorNotes": [],
-                };
-
-                // await widget.patientService.addPatient(newPatient);
-                widget.fetchPatients(); // Refresh patient list
-                Navigator.pop(context);
-
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Patient added successfully')),
-                );
-              } catch (e) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('Error adding patient: $e')),
-                );
-              }
-            } else if (_selectedDob == null) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text("Please select a date of birth")),
-              );
-            }
-          },
-          style: ElevatedButton.styleFrom(
-            backgroundColor: const Color(0xFF00C4B4),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-          ),
-          child: const Text(
-            'Add Patient',
-            style: TextStyle(color: Colors.white),
-          ),
-        ),
-      ],
     );
   }
 
   Widget _buildDobField(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8.0),
+      padding: const EdgeInsets.symmetric(vertical: 10),
       child: GestureDetector(
         onTap: () => _selectDob(context),
         child: AbsorbPointer(
           child: TextFormField(
-            decoration: InputDecoration(
-              labelText:
-                  _selectedDob == null
-                      ? "Select Date of Birth"
-                      : DateFormat('yyyy-MM-dd').format(_selectedDob!),
-              prefixIcon: const Icon(
-                Icons.calendar_today,
-                color: Color(0xFF00C4B4),
-              ),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-              filled: true,
-              fillColor: Colors.grey[100],
+            decoration: _inputDecoration(
+              _selectedDob == null
+                  ? "Select Date of Birth"
+                  : DateFormat('yyyy-MM-dd').format(_selectedDob!),
+              Icons.calendar_today,
             ),
+            validator:
+                (value) =>
+                    _selectedDob == null ? 'Date of birth is required' : null,
           ),
         ),
       ),
@@ -304,17 +336,16 @@ class _AddPatientDialogState extends State<AddPatientDialog> {
     String label,
     IconData icon, {
     TextInputType? keyboardType,
-    List<TextInputFormatter>? inputFormatters,
     String? Function(String?)? validator,
   }) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8.0),
+      padding: const EdgeInsets.symmetric(vertical: 10),
       child: TextFormField(
         controller: controller,
         keyboardType: keyboardType,
-        inputFormatters: inputFormatters,
         decoration: _inputDecoration(label, icon),
         validator: validator,
+        style: const TextStyle(fontSize: 16),
       ),
     );
   }
@@ -322,10 +353,19 @@ class _AddPatientDialogState extends State<AddPatientDialog> {
   InputDecoration _inputDecoration(String label, IconData icon) {
     return InputDecoration(
       labelText: label,
-      prefixIcon: Icon(icon, color: const Color(0xFF00C4B4)),
+      prefixIcon: Icon(icon, color: Colors.teal),
       border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
       filled: true,
       fillColor: Colors.grey[100],
+      contentPadding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide(color: Colors.grey[300]!),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: const BorderSide(color: Colors.teal, width: 2),
+      ),
     );
   }
 }

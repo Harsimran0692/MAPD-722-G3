@@ -10,6 +10,23 @@ export const getClinicalData = async (req, res) => {
   }
 };
 
+export const getPatientClinicalData = async (req, res) => {
+  try {
+    const { id } = req.params; // This is the ID from the request (e.g., a patient's ID)
+
+    // Search for a document where patientId matches the provided id
+    const patient = await ClinicalModel.findOne({ patientId: id });
+
+    if (patient) {
+      res.status(200).json({ message: "Patient found", data: patient });
+    } else {
+      res.status(404).json({ message: "Patient not found" });
+    }
+  } catch (error) {
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
+};
+
 export const getClinicalDataById = async (req, res) => {
   try {
     const { id } = req.params;
@@ -115,13 +132,24 @@ export const deleteClinicalDataById = async (req, res) => {
 export const updateClinicalData = async (req, res) => {
   try {
     const { id } = req.params;
-    const updatedRecord = await ClinicalModel.findByIdAndUpdate(id, req.body, {
-      new: true,
-      runValidators: true,
-    });
+    const updateData = req.body; // Get the updated data from the request body
+
+    // Validate that updateData is provided
+    if (!updateData || Object.keys(updateData).length === 0) {
+      return res.status(400).json({ message: "No update data provided." });
+    }
+
+    // Find and update the clinical record
+    const updatedRecord = await ClinicalModel.findByIdAndUpdate(
+      id,
+      { $set: updateData }, // Update all fields in updateData
+      { new: true, runValidators: true } // Return the updated document and run schema validators
+    );
+
     if (!updatedRecord) {
       return res.status(404).json({ message: "Clinical record not found." });
     }
+
     res.status(200).json({
       message: "Clinical record updated successfully.",
       clinicalRecord: updatedRecord,

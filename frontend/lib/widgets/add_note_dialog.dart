@@ -38,8 +38,15 @@ class AddNoteDialog extends StatelessWidget {
         ),
         ElevatedButton(
           onPressed: () {
-            onAdd(noteController.text);
-            Navigator.pop(context);
+            if (noteController.text.isNotEmpty) {
+              // Prevent empty notes
+              onAdd(noteController.text);
+              Navigator.pop(context);
+            } else {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text("Note cannot be empty")),
+              );
+            }
           },
           style: ElevatedButton.styleFrom(
             backgroundColor: const Color(0xFF00C4B4),

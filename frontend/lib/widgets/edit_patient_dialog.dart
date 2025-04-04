@@ -151,22 +151,6 @@ class _EditPatientDialogState extends State<EditPatientDialog> {
                             ? "Invalid email"
                             : null,
               ),
-              // DropdownButtonFormField<String>(
-              //   value: status,
-              //   items:
-              //       ['Stable', 'Critical', 'Recovering']
-              //           .map(
-              //             (status) => DropdownMenuItem(
-              //               value: status,
-              //               child: Text(status),
-              //             ),
-              //           )
-              //           .toList(),
-              //   onChanged: (value) => setState(() => status = value),
-              //   decoration: _inputDecoration("Status", Icons.health_and_safety),
-              //   validator:
-              //       (value) => value == null ? "Status is required" : null,
-              // ),
               _buildTextField(
                 systolicController,
                 "Systolic Pressure (mmHg)",
@@ -174,12 +158,14 @@ class _EditPatientDialogState extends State<EditPatientDialog> {
                 keyboardType: TextInputType.number,
                 inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                 validator: (value) {
-                  if (value == null || value.isEmpty)
+                  if (value == null || value.isEmpty) {
                     return "Systolic BP is required";
+                  }
                   final systolic = int.tryParse(value);
                   if (systolic == null) return "Must be a number";
-                  if (systolic < 50 || systolic > 300)
+                  if (systolic < 50 || systolic > 300) {
                     return "Must be between 50-300";
+                  }
                   return null;
                 },
               ),
@@ -190,16 +176,16 @@ class _EditPatientDialogState extends State<EditPatientDialog> {
                 keyboardType: TextInputType.number,
                 inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                 validator: (value) {
-                  if (value == null || value.isEmpty)
+                  if (value == null || value.isEmpty) {
                     return "Diastolic BP is required";
+                  }
                   final diastolic = int.tryParse(value);
                   if (diastolic == null) return "Must be a number";
-                  if (diastolic < 30 || diastolic > 200)
+                  if (diastolic < 30 || diastolic > 200) {
                     return "Must be between 30-200";
+                  }
                   final systolic = int.tryParse(systolicController.text);
-                  if (systolic != null &&
-                      diastolic != null &&
-                      systolic <= diastolic) {
+                  if (systolic != null && systolic <= diastolic) {
                     return "Systolic must be greater than Diastolic";
                   }
                   return null;
@@ -212,12 +198,14 @@ class _EditPatientDialogState extends State<EditPatientDialog> {
                 keyboardType: TextInputType.number,
                 inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                 validator: (value) {
-                  if (value == null || value.isEmpty)
+                  if (value == null || value.isEmpty) {
                     return "Respiration Rate is required";
+                  }
                   final respiration = int.tryParse(value);
                   if (respiration == null) return "Must be a number";
-                  if (respiration < 5 || respiration > 60)
+                  if (respiration < 5 || respiration > 60) {
                     return "Must be between 5-60";
+                  }
                   return null;
                 },
               ),
@@ -228,12 +216,14 @@ class _EditPatientDialogState extends State<EditPatientDialog> {
                 keyboardType: TextInputType.number,
                 inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                 validator: (value) {
-                  if (value == null || value.isEmpty)
+                  if (value == null || value.isEmpty) {
                     return "Oxygen level is required";
+                  }
                   final oxygen = int.tryParse(value);
                   if (oxygen == null) return "Must be a number";
-                  if (oxygen < 0 || oxygen > 100)
+                  if (oxygen < 0 || oxygen > 100) {
                     return "Must be between 0-100";
+                  }
                   return null;
                 },
               ),
@@ -244,8 +234,9 @@ class _EditPatientDialogState extends State<EditPatientDialog> {
                 keyboardType: TextInputType.number,
                 inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                 validator: (value) {
-                  if (value == null || value.isEmpty)
+                  if (value == null || value.isEmpty) {
                     return "Heart Rate is required";
+                  }
                   final hr = int.tryParse(value);
                   if (hr == null) return "Must be a number";
                   if (hr < 20 || hr > 250) return "Must be between 20-250";

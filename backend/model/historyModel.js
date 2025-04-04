@@ -1,16 +1,11 @@
 import { mongoose, Schema } from "mongoose";
 
-const ClinicalModel = new Schema(
+const HistoryModel = new Schema(
   {
     patientId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Patients",
       required: true,
-    },
-    status: {
-      type: String,
-      enum: ["Stable", "Critical", "Recovering"],
-      default: "N/A",
     },
     systolicPressure: {
       type: Number,
@@ -47,4 +42,4 @@ const ClinicalModel = new Schema(
   { timestamps: true }
 );
 
-export default mongoose.model("clinical_data", ClinicalModel);
+export default mongoose.model("history_data", HistoryModel);

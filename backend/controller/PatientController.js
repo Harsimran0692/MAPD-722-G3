@@ -1,3 +1,4 @@
+import ClinicalModel from "../model/ClinicalModel.js";
 import PatientModel from "../model/PatientModel.js";
 
 export const GetPatients = async (req, res) => {
@@ -97,6 +98,7 @@ export const DeletePatient = async (req, res) => {
       res.status(404).json({ message: "Patient not Found" });
       return;
     }
+    await ClinicalModel.deleteMany({ patientId: PatientId });
     const deletePatient = await PatientModel.findByIdAndDelete(PatientId);
     res
       .status(200)

@@ -4,12 +4,14 @@ class PatientSection extends StatelessWidget {
   final String title;
   final IconData icon;
   final List<Widget> content;
+  final Widget? action; // Add optional action parameter
 
   const PatientSection({
     super.key,
     required this.title,
     required this.icon,
     required this.content,
+    this.action, // Make it optional
   });
 
   @override
@@ -18,18 +20,25 @@ class PatientSection extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
+          mainAxisAlignment:
+              MainAxisAlignment.spaceBetween, // Space between title and action
           children: [
-            Icon(icon, color: const Color(0xFF0277BD), size: 30),
-            const SizedBox(width: 10),
-            Text(
-              title,
-              style: const TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-                color: Color(0xFF0277BD),
-                fontFamily: 'Poppins',
-              ),
+            Row(
+              children: [
+                Icon(icon, color: const Color(0xFF0277BD), size: 30),
+                const SizedBox(width: 10),
+                Text(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF0277BD),
+                    fontFamily: 'Poppins',
+                  ),
+                ),
+              ],
             ),
+            if (action != null) action!, // Display action if provided
           ],
         ),
         const SizedBox(height: 12),
