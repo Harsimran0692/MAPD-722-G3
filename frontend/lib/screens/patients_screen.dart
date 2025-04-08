@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:frontend/models/patients.dart';
-import 'package:frontend/screens/add_clinical_data_screen.dart'; // Import AddClinicalDataScreen
+import 'package:frontend/screens/add_clinical_data_screen.dart';
 import 'package:frontend/widgets/add_patient.dart';
 import 'package:intl/intl.dart';
 
@@ -56,6 +56,7 @@ class _PatientsScreenState extends State<PatientsScreen> {
       filterPatients();
       return widget.patients;
     } catch (e) {
+      print(e);
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text('Error fetching patients: $e')));
@@ -81,6 +82,7 @@ class _PatientsScreenState extends State<PatientsScreen> {
         filterPatients();
       });
     } catch (e) {
+      print(e);
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text('Error fetching patients: $e')));

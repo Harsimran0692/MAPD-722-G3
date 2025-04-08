@@ -79,23 +79,30 @@ class _AddClinicalDataScreenState extends State<AddClinicalDataScreen>
     required double oxygen,
   }) {
     // Example logic to calculate status based on clinical data
-    if (systolic < 90 ||
-        systolic > 140 ||
-        diastolic < 60 ||
-        diastolic > 90 ||
-        oxygen < 90 ||
-        heartRate < 40 ||
-        heartRate > 100 ||
-        respiratory < 8 ||
+    if (systolic < 90 || // Severe hypotension
+        systolic > 180 || // Hypertensive crisis
+        diastolic < 50 || // Severe low diastolic
+        diastolic > 120 || // Hypertensive crisis
+        oxygen < 90 || // Severe hypoxemia
+        heartRate < 40 || // Severe bradycardia
+        heartRate > 130 || // Severe tachycardia
+        respiratory < 8 || // Bradypnea
         respiratory > 30) {
+      // Tachypnea
       return "Critical";
-    } else if (systolic > 130 ||
-        diastolic > 85 ||
-        oxygen < 95 ||
-        (respiratory > 20 && respiratory <= 25) ||
+    }
+    // Check for recovering conditions (elevated but not critical)
+    else if ((systolic >= 130 &&
+            systolic <= 180) || // Stage 1 or 2 hypertension
+        (diastolic >= 80 && diastolic <= 120) || // Elevated diastolic
+        (oxygen >= 90 && oxygen < 95) || // Mild hypoxemia
+        (respiratory >= 20 && respiratory <= 30) || // Elevated breathing rate
         (respiratory >= 8 && respiratory < 12)) {
+      // Low breathing rate
       return "Recovering";
-    } else {
+    }
+    // If none of the above, patient is stable
+    else {
       return "Stable";
     }
   }

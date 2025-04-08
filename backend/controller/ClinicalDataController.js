@@ -132,7 +132,7 @@ export const deleteClinicalDataById = async (req, res) => {
 export const updateClinicalData = async (req, res) => {
   try {
     const { id } = req.params;
-    const updateData = req.body; // Get the updated data from the request body
+    const updateData = req.body;
 
     // Validate that updateData is provided
     if (!updateData || Object.keys(updateData).length === 0) {

@@ -14,3 +14,27 @@ A few resources to get you started if this is your first Flutter project:
 For help getting started with Flutter development, view the
 [online documentation](https://docs.flutter.dev/), which offers tutorials,
 samples, guidance on mobile development, and a full API reference.
+
+Map<String, dynamic> stableData = {
+"systolicPressure": 118, // Normal systolic
+"diastolicPressure": 78, // Normal diastolic
+"bloodOxygenation": 97, // Normal oxygen saturation
+"heartRate": 72, // Normal heart rate
+"respirationRate": 16, // Normal respiration rate
+};
+
+Map<String, dynamic> criticalData = {
+"systolicPressure": 185, // Hypertensive crisis
+"diastolicPressure": 125, // Hypertensive crisis
+"bloodOxygenation": 85, // Severe hypoxemia
+"heartRate": 135, // Severe tachycardia
+"respirationRate": 32, // Severe tachypnea
+};
+
+Map<String, dynamic> recoveringData = {
+"systolicPressure": 135, // Stage 1 hypertension
+"diastolicPressure": 85, // Elevated diastolic
+"bloodOxygenation": 92, // Mild hypoxemia
+"heartRate": 105, // Slightly elevated heart rate
+"respirationRate": 22, // Slightly elevated respiration
+};

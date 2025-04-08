@@ -3,7 +3,6 @@ import '../widgets/patient_header.dart';
 import '../widgets/patient_section.dart';
 import '../widgets/patient_info_row.dart';
 import '../widgets/doctor_note_tile.dart';
-import '../widgets/patient_history_row.dart';
 import '../widgets/edit_patient_dialog.dart';
 import '../widgets/add_note_dialog.dart';
 import '../widgets/update_note_dialog.dart';
@@ -23,6 +22,7 @@ class _PatientDetailState extends State<PatientDetail> {
   late Map<String, dynamic> patientData;
   final Patients _patients = Patients(); // Instance of Patients class
   List<Map<String, dynamic>> patientHistory = []; // Dynamic history list
+  bool isLoading = false; // Add loading state
 
   @override
   void initState() {
@@ -35,6 +35,7 @@ class _PatientDetailState extends State<PatientDetail> {
       patientData["updatedAt"] = patientData["createdAt"];
     }
     _fetchHistoryData(); // Fetch history on init
+    // _fetchPatientData(); // Fetch initial patient data
   }
 
   @override
@@ -45,64 +46,108 @@ class _PatientDetailState extends State<PatientDetail> {
 
   // Fetch patient history from API
   Future<void> _fetchHistoryData() async {
+    setState(() {
+      isLoading = true; // Show loader
+    });
     try {
       final history = await _patients.fetchPatientHistory(
         patientData["patientId"]["_id"].toString(),
       );
       setState(() {
-        patientHistory = history; // Update history list, empty is valid
+        patientHistory = history ?? []; // Update history list, handle null
+        isLoading = false; // Hide loader
       });
     } catch (e) {
-      // Only show error for non-404 issues (e.g., network errors)
       if (e.toString().contains("404")) {
         setState(() {
           patientHistory = []; // Ensure empty list on 404
+          isLoading = false; // Hide loader
         });
       } else {
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(content: Text("Error fetching history: $e")));
+        setState(() {
+          isLoading = false; // Hide loader on error
+        });
       }
     }
   }
 
-  // Fetch updated patient data (clinical data)
+  // Fetch updated patient data (clinical data) using the API
   Future<void> _fetchPatientData() async {
-    await Future.delayed(const Duration(seconds: 1)); // Simulate network delay
-    final updatedData = Map<String, dynamic>.from(widget.patient);
-    updatedData["doctorNotes"] = updatedData["doctorNotes"] ?? [];
-    updatedData["status"] = _calculateStatus(updatedData);
+    // print(_patients);
+    // setState(() {
+    //   isLoading = true; // Show loader
+    // });
+    // try {
+    //   final updatedData = await _patients.fetchPatientClinicalData(
+    //     patientData["patientId"]["_id"].toString(),
+    //   );
+    //   if (updatedData != null) {
+    //     updatedData["doctorNotes"] = updatedData["doctorNotes"] ?? [];
+    //     updatedData["status"] = _calculateStatus(updatedData);
 
-    setState(() {
-      patientData = updatedData;
-    });
+    //     setState(() {
+    //       patientData = updatedData;
+    //       isLoading = false; // Hide loader
+    //     });
+    //   } else {
+    //     setState(() {
+    //       isLoading = false; // Hide loader if no data
+    //     });
+    //     ScaffoldMessenger.of(
+    //       context,
+    //     ).showSnackBar(const SnackBar(content: Text("No clinical data found")));
+    //   }
+    // } catch (e) {
+    //   ScaffoldMessenger.of(context).showSnackBar(
+    //     SnackBar(content: Text("Error fetching patient data: $e")),
+    //   );
+    //   setState(() {
+    //     isLoading = false; // Hide loader on error
+    //   });
+    // }
   }
 
-  // Calculate status based on clinical data
-  String _calculateStatus(Map<String, dynamic> data) {
-    final systolic = data["systolicPressure"] as num? ?? 0;
-    final diastolic = data["diastolicPressure"] as num? ?? 0;
-    final oxygen = data["bloodOxygenation"] as num? ?? 0;
-    final heartRate = data["heartRate"] as num? ?? 0;
-    final respiratory = data["respirationRate"] as num? ?? 0;
+  // Refresh both patient data and history
+  Future<void> _onRefresh() async {
+    await Future.wait([_fetchPatientData(), _fetchHistoryData()]);
+  }
 
-    if (systolic < 90 ||
-        systolic > 140 ||
-        diastolic < 60 ||
-        diastolic > 90 ||
-        oxygen < 90 ||
-        heartRate < 40 ||
-        heartRate > 100 ||
-        respiratory < 8 ||
+  String _calculateStatus(Map<String, dynamic> data) {
+    final systolic = data["systolicPressure"] as num? ?? 0; // in mmHg
+    final diastolic = data["diastolicPressure"] as num? ?? 0; // in mmHg
+    final oxygen = data["bloodOxygenation"] as num? ?? 0; // in percentage
+    final heartRate = data["heartRate"] as num? ?? 0; // in bpm
+    final respiratory =
+        data["respirationRate"] as num? ?? 0; // in breaths per minute
+
+    // Check for critical conditions first
+    if (systolic < 90 || // Severe hypotension
+        systolic > 180 || // Hypertensive crisis
+        diastolic < 50 || // Severe low diastolic
+        diastolic > 120 || // Hypertensive crisis
+        oxygen < 90 || // Severe hypoxemia
+        heartRate < 40 || // Severe bradycardia
+        heartRate > 130 || // Severe tachycardia
+        respiratory < 8 || // Bradypnea
         respiratory > 30) {
+      // Tachypnea
       return "Critical";
-    } else if (systolic > 130 ||
-        diastolic > 85 ||
-        oxygen < 95 ||
-        (respiratory > 20 && respiratory <= 25) ||
+    }
+    // Check for recovering conditions (elevated but not critical)
+    else if ((systolic >= 130 &&
+            systolic <= 180) || // Stage 1 or 2 hypertension
+        (diastolic >= 80 && diastolic <= 120) || // Elevated diastolic
+        (oxygen >= 90 && oxygen < 95) || // Mild hypoxemia
+        (respiratory >= 20 && respiratory <= 30) || // Elevated breathing rate
         (respiratory >= 8 && respiratory < 12)) {
+      // Low breathing rate
       return "Recovering";
-    } else {
+    }
+    // If none of the above, patient is stable
+    else {
       return "Stable";
     }
   }
@@ -298,6 +343,7 @@ class _PatientDetailState extends State<PatientDetail> {
         "diastolicPressure": num.tryParse(diastolicController.text),
         "bloodOxygenation": num.tryParse(oxygenController.text),
         "heartRate": num.tryParse(heartController.text),
+        "respirationRate": num.parse(respirationController.text),
       }),
       "updatedAt": DateTime.now().toString(),
     };
@@ -636,312 +682,330 @@ class _PatientDetailState extends State<PatientDetail> {
           ),
         ],
       ),
-      body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            colors: [Color(0xFFE0F7FA), Colors.white],
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-          ),
-        ),
-        child: SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.all(20.0),
-            child: RefreshIndicator(
-              onRefresh: () async {
-                await _fetchPatientData();
-                await _fetchHistoryData();
-              },
-              color: const Color(0xFF00C4B4),
-              child: SingleChildScrollView(
-                physics: const AlwaysScrollableScrollPhysics(),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    PatientHeader(patientData: patientData),
-                    const SizedBox(height: 30),
-                    PatientSection(
-                      title: "Patient Information",
-                      icon: Icons.person,
-                      content: [
-                        PatientInfoRow(
-                          icon: Icons.cake,
-                          label: "Age",
-                          value:
-                              patientData["patientId"]["dob"] != null
-                                  ? "${DateTime.now().year - DateTime.parse(patientData["patientId"]["dob"]).year}"
-                                  : 'N/A',
-                        ),
-                        PatientInfoRow(
-                          icon: Icons.transgender,
-                          label: "Gender",
-                          value:
-                              patientData["patientId"]["gender"] as String? ??
-                              'N/A',
-                        ),
-                        PatientInfoRow(
-                          icon: Icons.email,
-                          label: "Email",
-                          value:
-                              patientData["patientId"]["email"] as String? ??
-                              'N/A',
-                        ),
-                        PatientInfoRow(
-                          icon: Icons.calendar_today,
-                          label: "Date of Birth",
-                          value: formatDob(
-                            patientData["patientId"]["dob"] as String?,
-                          ),
-                        ),
-                      ],
-                    ),
-                    PatientSection(
-                      title: "Clinical Data",
-                      icon: Icons.local_hospital,
-                      action: IconButton(
-                        icon: const Icon(Icons.edit, color: Color(0xFF00C4B4)),
-                        onPressed: () => _showEditClinicalDataDialog(context),
-                      ),
-                      content: [
-                        PatientInfoRow(
-                          icon: Icons.favorite,
-                          label: "Blood Pressure",
-                          value:
-                              "${patientData["systolicPressure"]?.toString() ?? 'N/A'}/${patientData["diastolicPressure"]?.toString() ?? 'N/A'} mmHg",
-                        ),
-                        PatientInfoRow(
-                          icon: Icons.air,
-                          label: "Respiration Rate",
-                          value:
-                              "${patientData["respirationRate"]?.toString() ?? 'N/A'} breaths/min",
-                        ),
-                        PatientInfoRow(
-                          icon: Icons.opacity,
-                          label: "Blood Oxygenation",
-                          value:
-                              "${patientData["bloodOxygenation"]?.toString() ?? 'N/A'}%",
-                        ),
-                        PatientInfoRow(
-                          icon: Icons.monitor_heart,
-                          label: "Heart Rate",
-                          value:
-                              "${patientData["heartRate"]?.toString() ?? 'N/A'} bpm",
-                        ),
-                        PatientInfoRow(
-                          icon: Icons.assessment,
-                          label: "Status",
-                          value: patientData["status"] ?? "N/A",
-                        ),
-                        PatientInfoRow(
-                          icon: Icons.calendar_today,
-                          label: "Created At",
-                          value: formatDateTime(
-                            patientData["createdAt"] as String?,
-                          ),
-                        ),
-                        PatientInfoRow(
-                          icon: Icons.update,
-                          label: "Updated At",
-                          value: formatDateTime(
-                            patientData["updatedAt"] as String?,
-                          ),
-                        ),
-                      ],
-                    ),
-                    PatientSection(
-                      title: "Doctor Notes",
-                      icon: Icons.note,
-                      content: [
-                        if (doctorNotes.isEmpty)
-                          const Padding(
-                            padding: EdgeInsets.all(16.0),
-                            child: Text(
-                              "No notes available.",
-                              style: TextStyle(
-                                fontSize: 16,
-                                color: Colors.grey,
+      body: Stack(
+        children: [
+          Container(
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                colors: [Color(0xFFE0F7FA), Colors.white],
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+              ),
+            ),
+            child: SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.all(20.0),
+                child: RefreshIndicator(
+                  onRefresh: _onRefresh, // Trigger refresh
+                  color: const Color(0xFF00C4B4),
+                  child: SingleChildScrollView(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        PatientHeader(patientData: patientData),
+                        const SizedBox(height: 30),
+                        PatientSection(
+                          title: "Patient Information",
+                          icon: Icons.person,
+                          content: [
+                            PatientInfoRow(
+                              icon: Icons.cake,
+                              label: "Age",
+                              value:
+                                  patientData["patientId"]["dob"] != null
+                                      ? "${DateTime.now().year - DateTime.parse(patientData["patientId"]["dob"]).year}"
+                                      : 'N/A',
+                            ),
+                            PatientInfoRow(
+                              icon: Icons.transgender,
+                              label: "Gender",
+                              value:
+                                  patientData["patientId"]["gender"]
+                                      as String? ??
+                                  'N/A',
+                            ),
+                            PatientInfoRow(
+                              icon: Icons.email,
+                              label: "Email",
+                              value:
+                                  patientData["patientId"]["email"]
+                                      as String? ??
+                                  'N/A',
+                            ),
+                            PatientInfoRow(
+                              icon: Icons.calendar_today,
+                              label: "Date of Birth",
+                              value: formatDob(
+                                patientData["patientId"]["dob"] as String?,
                               ),
                             ),
-                          )
-                        else
-                          ...doctorNotes.map(
-                            (note) => DoctorNoteTile(
-                              note: note,
-                              onUpdate:
-                                  () => _showUpdateNoteDialog(context, note),
-                              onDelete: () => _deleteNote(note),
-                            ),
-                          ),
-                        Padding(
-                          padding: const EdgeInsets.only(top: 8.0),
-                          child: ElevatedButton.icon(
-                            icon: const Icon(Icons.add, size: 18),
-                            label: const Text("Add Note"),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFF00C4B4),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
+                          ],
+                        ),
+                        PatientSection(
+                          title: "Clinical Data",
+                          icon: Icons.local_hospital,
+                          action: IconButton(
+                            icon: const Icon(
+                              Icons.edit,
+                              color: Color(0xFF00C4B4),
                             ),
                             onPressed:
-                                () => showDialog(
-                                  context: context,
-                                  builder:
-                                      (_) => AddNoteDialog(onAdd: _addNote),
-                                ),
+                                () => _showEditClinicalDataDialog(context),
                           ),
-                        ),
-                      ],
-                    ),
-                    PatientSection(
-                      title: "Patient History",
-                      icon: Icons.history,
-                      content: [
-                        if (patientHistory.isEmpty)
-                          const Padding(
-                            padding: EdgeInsets.all(16.0),
-                            child: Text(
-                              "No history available.",
-                              style: TextStyle(
-                                fontFamily: 'Poppins',
-                                fontSize: 16,
-                                color: Colors.grey,
-                                fontStyle: FontStyle.italic,
+                          content: [
+                            PatientInfoRow(
+                              icon: Icons.favorite,
+                              label: "Blood Pressure",
+                              value:
+                                  "${patientData["systolicPressure"]?.toString() ?? 'N/A'}/${patientData["diastolicPressure"]?.toString() ?? 'N/A'} mmHg",
+                            ),
+                            PatientInfoRow(
+                              icon: Icons.air,
+                              label: "Respiration Rate",
+                              value:
+                                  "${patientData["respirationRate"]?.toString() ?? 'N/A'} breaths/min",
+                            ),
+                            PatientInfoRow(
+                              icon: Icons.opacity,
+                              label: "Blood Oxygenation",
+                              value:
+                                  "${patientData["bloodOxygenation"]?.toString() ?? 'N/A'}%",
+                            ),
+                            PatientInfoRow(
+                              icon: Icons.monitor_heart,
+                              label: "Heart Rate",
+                              value:
+                                  "${patientData["heartRate"]?.toString() ?? 'N/A'} bpm",
+                            ),
+                            PatientInfoRow(
+                              icon: Icons.assessment,
+                              label: "Status",
+                              value: patientData["status"] ?? "N/A",
+                            ),
+                            PatientInfoRow(
+                              icon: Icons.calendar_today,
+                              label: "Created At",
+                              value: formatDateTime(
+                                patientData["createdAt"] as String?,
                               ),
                             ),
-                          )
-                        else
-                          ...patientHistory.map(
-                            (history) => Padding(
-                              padding: const EdgeInsets.only(bottom: 8.0),
-                              child: Card(
-                                elevation: 4,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12),
+                            PatientInfoRow(
+                              icon: Icons.update,
+                              label: "Updated At",
+                              value: formatDateTime(
+                                patientData["updatedAt"] as String?,
+                              ),
+                            ),
+                          ],
+                        ),
+                        PatientSection(
+                          title: "Doctor Notes",
+                          icon: Icons.note,
+                          content: [
+                            if (doctorNotes.isEmpty)
+                              const Padding(
+                                padding: EdgeInsets.all(16.0),
+                                child: Text(
+                                  "No notes available.",
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    color: Colors.grey,
+                                  ),
                                 ),
-                                child: Padding(
-                                  padding: const EdgeInsets.all(12.0),
-                                  child: Row(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Expanded(
-                                        child: Column(
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.start,
-                                          children: [
-                                            Text(
-                                              "Date: ${formatDateTime(history["createdAt"] as String?)}",
-                                              style: const TextStyle(
-                                                fontFamily: 'Poppins',
-                                                fontWeight: FontWeight.bold,
-                                                fontSize: 16,
-                                                color: Color(0xFF0277BD),
-                                              ),
+                              )
+                            else
+                              ...doctorNotes.map(
+                                (note) => DoctorNoteTile(
+                                  note: note,
+                                  onUpdate:
+                                      () =>
+                                          _showUpdateNoteDialog(context, note),
+                                  onDelete: () => _deleteNote(note),
+                                ),
+                              ),
+                            Padding(
+                              padding: const EdgeInsets.only(top: 8.0),
+                              child: ElevatedButton.icon(
+                                icon: const Icon(Icons.add, size: 18),
+                                label: const Text("Add Note"),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: const Color(0xFF00C4B4),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                ),
+                                onPressed:
+                                    () => showDialog(
+                                      context: context,
+                                      builder:
+                                          (_) => AddNoteDialog(onAdd: _addNote),
+                                    ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        PatientSection(
+                          title: "Patient History",
+                          icon: Icons.history,
+                          content: [
+                            if (patientHistory.isEmpty)
+                              const Padding(
+                                padding: EdgeInsets.all(16.0),
+                                child: Text(
+                                  "No history available.",
+                                  style: TextStyle(
+                                    fontFamily: 'Poppins',
+                                    fontSize: 16,
+                                    color: Colors.grey,
+                                    fontStyle: FontStyle.italic,
+                                  ),
+                                ),
+                              )
+                            else
+                              ...patientHistory.map(
+                                (history) => Padding(
+                                  padding: const EdgeInsets.only(bottom: 8.0),
+                                  child: Card(
+                                    elevation: 4,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    child: Padding(
+                                      padding: const EdgeInsets.all(12.0),
+                                      child: Row(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Expanded(
+                                            child: Column(
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.start,
+                                              children: [
+                                                Text(
+                                                  "Date: ${formatDateTime(history["createdAt"] as String?)}",
+                                                  style: const TextStyle(
+                                                    fontFamily: 'Poppins',
+                                                    fontWeight: FontWeight.bold,
+                                                    fontSize: 16,
+                                                    color: Color(0xFF0277BD),
+                                                  ),
+                                                ),
+                                                const SizedBox(height: 8),
+                                                _buildHistoryDetail(
+                                                  "Status",
+                                                  _calculateStatus(history),
+                                                  Colors.blueGrey,
+                                                ),
+                                                _buildHistoryDetail(
+                                                  "Blood Pressure",
+                                                  "${history["systolicPressure"]?.toString() ?? 'N/A'}/${history["diastolicPressure"]?.toString() ?? 'N/A'} mmHg",
+                                                  Colors.red,
+                                                ),
+                                                _buildHistoryDetail(
+                                                  "Respiration Rate",
+                                                  "${history["respirationRate"]?.toString() ?? 'N/A'} breaths/min",
+                                                  Colors.green,
+                                                ),
+                                                _buildHistoryDetail(
+                                                  "Blood Oxygenation",
+                                                  "${history["bloodOxygenation"]?.toString() ?? 'N/A'}%",
+                                                  Colors.purple,
+                                                ),
+                                                _buildHistoryDetail(
+                                                  "Heart Rate",
+                                                  "${history["heartRate"]?.toString() ?? 'N/A'} bpm",
+                                                  Colors.orange,
+                                                ),
+                                                if (history["doctorNotes"] !=
+                                                        null &&
+                                                    (history["doctorNotes"]
+                                                            as List)
+                                                        .isNotEmpty)
+                                                  _buildDoctorNotes(
+                                                    history["doctorNotes"]
+                                                        as List,
+                                                  ),
+                                                _buildHistoryDetail(
+                                                  "Updated At",
+                                                  "${formatDateTime(history["updatedAt"] as String?) ?? 'N/A'}",
+                                                  Colors.orange,
+                                                ),
+                                              ],
                                             ),
-                                            const SizedBox(height: 8),
-                                            _buildHistoryDetail(
-                                              "Status",
-                                              _calculateStatus(history),
-                                              Colors.blueGrey,
+                                          ),
+                                          IconButton(
+                                            icon: const Icon(
+                                              Icons.edit,
+                                              color: Color(0xFF00C4B4),
                                             ),
-                                            _buildHistoryDetail(
-                                              "Blood Pressure",
-                                              "${history["systolicPressure"]?.toString() ?? 'N/A'}/${history["diastolicPressure"]?.toString() ?? 'N/A'} mmHg",
-                                              Colors.red,
-                                            ),
-                                            _buildHistoryDetail(
-                                              "Respiration Rate",
-                                              "${history["respirationRate"]?.toString() ?? 'N/A'} breaths/min",
-                                              Colors.green,
-                                            ),
-                                            _buildHistoryDetail(
-                                              "Blood Oxygenation",
-                                              "${history["bloodOxygenation"]?.toString() ?? 'N/A'}%",
-                                              Colors.purple,
-                                            ),
-                                            _buildHistoryDetail(
-                                              "Heart Rate",
-                                              "${history["heartRate"]?.toString() ?? 'N/A'} bpm",
-                                              Colors.orange,
-                                            ),
-                                            if (history["doctorNotes"] !=
-                                                    null &&
-                                                (history["doctorNotes"] as List)
-                                                    .isNotEmpty)
-                                              _buildDoctorNotes(
-                                                history["doctorNotes"] as List,
-                                              ),
-                                            _buildHistoryDetail(
-                                              "Updated At",
-                                              "${formatDateTime(history["updatedAt"] as String?) ?? 'N/A'} ",
-                                              Colors.orange,
-                                            ),
-                                          ],
-                                        ),
+                                            onPressed:
+                                                () => _showEditHistoryDialog(
+                                                  context,
+                                                  history,
+                                                ),
+                                          ),
+                                        ],
                                       ),
-                                      IconButton(
-                                        icon: const Icon(
-                                          Icons.edit,
-                                          color: Color(0xFF00C4B4),
-                                        ),
-                                        onPressed:
-                                            () => _showEditHistoryDialog(
-                                              context,
-                                              history,
-                                            ),
-                                      ),
-                                    ],
+                                    ),
                                   ),
                                 ),
                               ),
-                            ),
-                          ),
-                        Padding(
-                          padding: const EdgeInsets.only(top: 12.0),
-                          child: ElevatedButton.icon(
-                            icon: const Icon(
-                              Icons.add,
-                              size: 20,
-                              color: Colors.white,
-                            ),
-                            label: const Text(
-                              "Add History",
-                              style: TextStyle(
-                                fontFamily: 'Poppins',
-                                fontSize: 16,
-                                fontWeight: FontWeight.w600,
-                                color: Colors.white,
-                              ),
-                            ),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFF00C4B4),
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 20,
-                                vertical: 12,
-                              ),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              elevation: 4,
-                            ),
-                            onPressed:
-                                () => showDialog(
-                                  context: context,
-                                  builder:
-                                      (_) =>
-                                          AddHistoryDialog(onAdd: _addHistory),
+                            Padding(
+                              padding: const EdgeInsets.only(top: 12.0),
+                              child: ElevatedButton.icon(
+                                icon: const Icon(
+                                  Icons.add,
+                                  size: 20,
+                                  color: Colors.white,
                                 ),
-                          ),
+                                label: const Text(
+                                  "Add History",
+                                  style: TextStyle(
+                                    fontFamily: 'Poppins',
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w600,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: const Color(0xFF00C4B4),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 20,
+                                    vertical: 12,
+                                  ),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  elevation: 4,
+                                ),
+                                onPressed:
+                                    () => showDialog(
+                                      context: context,
+                                      builder:
+                                          (_) => AddHistoryDialog(
+                                            onAdd: _addHistory,
+                                          ),
+                                    ),
+                              ),
+                            ),
+                          ],
                         ),
                       ],
                     ),
-                  ],
+                  ),
                 ),
               ),
             ),
           ),
-        ),
+          if (isLoading)
+            Container(
+              color: Colors.black.withOpacity(0.5), // Semi-transparent overlay
+              child: const Center(
+                child: CircularProgressIndicator(color: Color(0xFF00C4B4)),
+              ),
+            ),
+        ],
       ),
     );
   }

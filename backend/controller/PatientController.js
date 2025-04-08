@@ -58,33 +58,57 @@ export const AddPatient = async (req, res) => {
 };
 
 export const UpdatePatient = async (req, res) => {
-  const Patient = req.params.id;
+  const patientId = req.params.id; // Renamed for clarity (Patient -> patientId)
   const { name, age, dob, email } = req.body;
+
   const updatedFields = {};
 
   try {
-    const PatientExist = await PatientModel.findById(Patient);
-    if (!PatientExist) {
-      res.status(404).json({ message: "Patient not Found" });
-      return;
+    // Check if patient exists
+    const patientExist = await PatientModel.findById(patientId);
+    if (!patientExist) {
+      return res.status(404).json({ message: "Patient not Found" });
     }
+
+    // Add fields to updatedFields only if they exist in req.body
     if (name) updatedFields.name = name;
     if (age) updatedFields.age = age;
     if (dob) updatedFields.dob = dob;
-    if (email) updatedFields.emai = email;
+    if (email) {
+      // Check if the new email is already in use by another patient
+      const emailExists = await PatientModel.findOne({
+        email: email.toLowerCase(),
+      });
+      if (emailExists && emailExists._id.toString() !== patientId) {
+        return res
+          .status(400)
+          .json({ message: "Email already in use by another patient" });
+      }
+      updatedFields.email = email; // Use the correct field name
+    }
 
-    const UpdatePatient = await PatientModel.findByIdAndUpdate(
-      Patient,
+    // Perform the update
+    const updatedPatient = await PatientModel.findByIdAndUpdate(
+      patientId,
       updatedFields,
-      { new: true }
+      { new: true, runValidators: true } // Ensure validators are run
     );
-    res
-      .status(200)
-      .json({ mesage: "Patient updated Successfully", patient: UpdatePatient });
+
+    // Respond with success
+    res.status(200).json({
+      message: "Patient updated Successfully",
+      patient: updatedPatient,
+    });
   } catch (error) {
+    // Handle specific errors
+    if (error.name === "MongoError" && error.code === 11000) {
+      return res
+        .status(400)
+        .json({ message: "Duplicate email error", error: error.message });
+    }
     res
       .status(500)
-      .json({ message: "Error fetching Patient", error: error.message });
+      .json({ message: "Error updating patient", error: error.message });
   }
 };
 

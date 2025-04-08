@@ -22,8 +22,8 @@ class _HomeScreenState extends State<HomeScreen>
   String searchQuery = "";
   RangeValues ageRange = const RangeValues(0, 100);
 
-  String userName = "Dr. Adma Smith";
-  String userEmail = "adma.smith@example.com";
+  String userName = "Dr. John Smith";
+  String userEmail = "john.smith@example.com";
   String userImage =
       "https://www.gravatar.com/avatar/2c7d99fe281ecd3bcd65ab915bac6dd5?s=250";
 
@@ -72,6 +72,7 @@ class _HomeScreenState extends State<HomeScreen>
         filterPatients();
       });
     } catch (e) {
+      print(e);
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text('Error fetching patients: $e')));
@@ -399,7 +400,7 @@ class _HomeScreenState extends State<HomeScreen>
               Padding(
                 padding: const EdgeInsets.fromLTRB(
                   16,
-                  40,
+                  80,
                   16,
                   10,
                 ), // Adjusted padding for top bar
