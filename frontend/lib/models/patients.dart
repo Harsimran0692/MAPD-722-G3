@@ -2,8 +2,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 class ApiClient {
-  static const String baseUrl =
-      "http://localhost:8000/api"; // Configurable base URL
+  static const String baseUrl = "http://localhost:8000/api"; // base URL
   final http.Client _client;
 
   ApiClient({http.Client? client}) : _client = client ?? http.Client();
@@ -35,8 +34,9 @@ class ApiClient {
           );
         }
       } on http.ClientException catch (e) {
-        if (attempt == retries)
+        if (attempt == retries) {
           throw NetworkException('Network error after $retries retries: $e');
+        }
         await Future.delayed(Duration(seconds: 1 << attempt));
       } catch (e) {
         if (attempt == retries) rethrow;
@@ -73,8 +73,9 @@ class ApiClient {
           );
         }
       } on http.ClientException catch (e) {
-        if (attempt == retries)
+        if (attempt == retries) {
           throw NetworkException('Network error after $retries retries: $e');
+        }
         await Future.delayed(Duration(seconds: 1 << attempt));
       } catch (e) {
         if (attempt == retries) rethrow;
@@ -111,8 +112,9 @@ class ApiClient {
           );
         }
       } on http.ClientException catch (e) {
-        if (attempt == retries)
+        if (attempt == retries) {
           throw NetworkException('Network error after $retries retries: $e');
+        }
         await Future.delayed(Duration(seconds: 1 << attempt));
       } catch (e) {
         if (attempt == retries) rethrow;
@@ -148,10 +150,11 @@ class ApiClient {
           );
         }
       } on http.ClientException catch (e) {
-        if (attempt == retries)
+        if (attempt == retries) {
           throw NetworkException(
             'Network error adding patient after $retries retries: $e',
           );
+        }
         await Future.delayed(Duration(seconds: 1 << attempt));
       } catch (e) {
         if (attempt == retries) rethrow;
@@ -186,10 +189,11 @@ class ApiClient {
           );
         }
       } on http.ClientException catch (e) {
-        if (attempt == retries)
+        if (attempt == retries) {
           throw NetworkException(
             'Network error deleting patient after $retries retries: $e',
           );
+        }
         await Future.delayed(Duration(seconds: 1 << attempt));
       } catch (e) {
         if (attempt == retries) rethrow;
@@ -226,10 +230,11 @@ class ApiClient {
           );
         }
       } on http.ClientException catch (e) {
-        if (attempt == retries)
+        if (attempt == retries) {
           throw NetworkException(
             'Network error updating patient after $retries retries: $e',
           );
+        }
         await Future.delayed(Duration(seconds: 1 << attempt));
       } catch (e) {
         if (attempt == retries) rethrow;
@@ -265,10 +270,11 @@ class ApiClient {
           );
         }
       } on http.ClientException catch (e) {
-        if (attempt == retries)
+        if (attempt == retries) {
           throw NetworkException(
             'Network error adding clinical data after $retries retries: $e',
           );
+        }
         await Future.delayed(Duration(seconds: 1 << attempt));
       } catch (e) {
         if (attempt == retries) rethrow;
@@ -305,10 +311,11 @@ class ApiClient {
           );
         }
       } on http.ClientException catch (e) {
-        if (attempt == retries)
+        if (attempt == retries) {
           throw NetworkException(
             'Network error updating clinical data after $retries retries: $e',
           );
+        }
         await Future.delayed(Duration(seconds: 1 << attempt));
       } catch (e) {
         if (attempt == retries) rethrow;
@@ -343,10 +350,11 @@ class ApiClient {
           );
         }
       } on http.ClientException catch (e) {
-        if (attempt == retries)
+        if (attempt == retries) {
           throw NetworkException(
             'Network error deleting clinical data after $retries retries: $e',
           );
+        }
         await Future.delayed(Duration(seconds: 1 << attempt));
       } catch (e) {
         if (attempt == retries) rethrow;
@@ -389,8 +397,9 @@ class ApiClient {
           );
         }
       } on http.ClientException catch (e) {
-        if (attempt == retries)
+        if (attempt == retries) {
           throw NetworkException('Network error after $retries retries: $e');
+        }
         await Future.delayed(Duration(seconds: 1 << attempt));
       } catch (e) {
         if (attempt == retries) rethrow;
@@ -427,10 +436,11 @@ class ApiClient {
           );
         }
       } on http.ClientException catch (e) {
-        if (attempt == retries)
+        if (attempt == retries) {
           throw NetworkException(
             'Network error adding patient history after $retries retries: $e',
           );
+        }
         await Future.delayed(Duration(seconds: 1 << attempt));
       } catch (e) {
         if (attempt == retries) rethrow;
@@ -467,10 +477,11 @@ class ApiClient {
           );
         }
       } on http.ClientException catch (e) {
-        if (attempt == retries)
+        if (attempt == retries) {
           throw NetworkException(
             'Network error updating patient history after $retries retries: $e',
           );
+        }
         await Future.delayed(Duration(seconds: 1 << attempt));
       } catch (e) {
         if (attempt == retries) rethrow;

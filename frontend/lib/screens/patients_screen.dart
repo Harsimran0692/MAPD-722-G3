@@ -4,8 +4,10 @@ import 'package:frontend/screens/add_clinical_data_screen.dart';
 import 'package:frontend/widgets/add_patient.dart';
 import 'package:intl/intl.dart';
 
+// PatientsScreen widget to display and manage patient list
 class PatientsScreen extends StatefulWidget {
-  final List<Map<String, dynamic>> patients;
+  final List<Map<String, dynamic>>
+  patients; // List of patients passed as parameter
 
   const PatientsScreen({super.key, required this.patients});
 
@@ -14,20 +16,23 @@ class PatientsScreen extends StatefulWidget {
 }
 
 class _PatientsScreenState extends State<PatientsScreen> {
-  final Patients patientService = Patients();
-  late Future<List<Map<String, dynamic>>> _patientsFuture;
-  List<Map<String, dynamic>> filteredPatients = [];
-  String filterGender = "All";
-  String searchQuery = "";
-  RangeValues ageRange = const RangeValues(0, 100);
-  bool _isLoading = true;
+  final Patients patientService =
+      Patients(); // Service to handle patient API calls
+  late Future<List<Map<String, dynamic>>>
+  _patientsFuture; // Future for initial patient fetch
+  List<Map<String, dynamic>> filteredPatients = []; // Filtered list of patients
+  String filterGender = "All"; // Gender filter
+  String searchQuery = ""; // Search query for filtering patients
+  RangeValues ageRange = const RangeValues(0, 100); // Age range filter
+  bool _isLoading = true; // Loading state indicator
 
   @override
   void initState() {
     super.initState();
-    _fetchPatientsOnLoad();
+    _fetchPatientsOnLoad(); // Fetch patients when screen initializes
   }
 
+  // Fetch patients when screen loads and update UI
   Future<void> _fetchPatientsOnLoad() async {
     setState(() {
       _isLoading = true;
@@ -39,6 +44,7 @@ class _PatientsScreenState extends State<PatientsScreen> {
     });
   }
 
+  // Initial fetch of patients from API
   Future<List<Map<String, dynamic>>> _fetchPatientsInitial() async {
     try {
       final fetchedPatients = await patientService.fetchPatients();
@@ -47,13 +53,15 @@ class _PatientsScreenState extends State<PatientsScreen> {
         fetchedPatients.map((p) {
           if (p["dob"] != null) {
             final dob = DateTime.tryParse(p["dob"]);
-            if (dob != null) p["dob"] = _formatDate(dob);
+            if (dob != null) {
+              p["dob"] = _formatDate(dob); // Format date of birth
+            }
           }
           return p;
         }).toList(),
       );
       filteredPatients = List.from(widget.patients);
-      filterPatients();
+      filterPatients(); // Apply filters after fetching
       return widget.patients;
     } catch (e) {
       print(e);
@@ -64,6 +72,7 @@ class _PatientsScreenState extends State<PatientsScreen> {
     }
   }
 
+  // Fetch updated patient list and refresh UI
   Future<void> _fetchPatients() async {
     try {
       final fetchedPatients = await patientService.fetchPatients();
@@ -73,13 +82,15 @@ class _PatientsScreenState extends State<PatientsScreen> {
           fetchedPatients.map((p) {
             if (p["dob"] != null) {
               final dob = DateTime.tryParse(p["dob"]);
-              if (dob != null) p["dob"] = _formatDate(dob);
+              if (dob != null) {
+                p["dob"] = _formatDate(dob); // Format date of birth
+              }
             }
             return p;
           }).toList(),
         );
         filteredPatients = List.from(widget.patients);
-        filterPatients();
+        filterPatients(); // Apply filters
       });
     } catch (e) {
       print(e);
@@ -89,6 +100,7 @@ class _PatientsScreenState extends State<PatientsScreen> {
     }
   }
 
+  // Filter patients based on gender, age, and search query
   void filterPatients() {
     setState(() {
       filteredPatients =
@@ -112,6 +124,7 @@ class _PatientsScreenState extends State<PatientsScreen> {
     });
   }
 
+  // Show dialog to add new patient
   void showAddPatientDialog() {
     showModalBottomSheet(
       context: context,
@@ -127,6 +140,7 @@ class _PatientsScreenState extends State<PatientsScreen> {
     );
   }
 
+  // Show modal for advanced filters
   void _showFilterModal() {
     String tempFilterGender = filterGender;
     RangeValues tempAgeRange = ageRange;
@@ -242,6 +256,7 @@ class _PatientsScreenState extends State<PatientsScreen> {
     );
   }
 
+  // Build filter section widget for gender or other options
   Widget _buildFilterSection(
     String title,
     List<String> options,
@@ -295,6 +310,7 @@ class _PatientsScreenState extends State<PatientsScreen> {
     );
   }
 
+  // Calculate age from date of birth
   int _calculateAge(String? dob) {
     if (dob == null) return 0;
     final birthDate = DateTime.tryParse(dob);
@@ -302,11 +318,13 @@ class _PatientsScreenState extends State<PatientsScreen> {
     return DateTime.now().year - birthDate.year;
   }
 
+  // Format date for display
   String _formatDate(DateTime? date) {
     if (date == null) return "N/A";
     return DateFormat('yyyy-MM-dd').format(date);
   }
 
+  // Fetch patients and reload UI
   Future<void> _fetchPatientsAndReload() async {
     setState(() {
       _isLoading = true;
@@ -317,6 +335,7 @@ class _PatientsScreenState extends State<PatientsScreen> {
     });
   }
 
+  // Delete a patient
   Future<void> _deletePatient(Map<String, dynamic> patient) async {
     try {
       final patientId = patient["_id"]?.toString();
@@ -336,6 +355,7 @@ class _PatientsScreenState extends State<PatientsScreen> {
     }
   }
 
+  // Edit patient details
   Future<bool> _editPatient(Map<String, dynamic> patient) async {
     final nameController = TextEditingController(text: patient["name"] ?? "");
     final emailController = TextEditingController(text: patient["email"] ?? "");
@@ -412,8 +432,9 @@ class _PatientsScreenState extends State<PatientsScreen> {
                       if (updatedData.isNotEmpty) {
                         try {
                           final patientId = patient["_id"]?.toString();
-                          if (patientId == null)
+                          if (patientId == null) {
                             throw Exception("Patient ID not found");
+                          }
                           final updatedPatient = await patientService
                               .updatePatient(patientId, updatedData);
                           await _fetchPatientsAndReload();
@@ -454,6 +475,7 @@ class _PatientsScreenState extends State<PatientsScreen> {
         false;
   }
 
+  // Show dialog to add clinical data for a patient
   void _showAddClinicalDataDialog(BuildContext context, String patientId) {
     Navigator.push(
       context,
@@ -902,6 +924,7 @@ class _PatientsScreenState extends State<PatientsScreen> {
     );
   }
 
+  // Build summary widgets for a patient
   List<Widget> _buildPatientSummary(Map<String, dynamic> patient) {
     return [
       Text(

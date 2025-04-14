@@ -47,12 +47,12 @@ class _AddHistoryDialogState extends State<AddHistoryDialog> {
                 onPrimary: Colors.white,
                 surface: Colors.white,
               ),
-              dialogBackgroundColor: Colors.white,
               textButtonTheme: TextButtonThemeData(
                 style: TextButton.styleFrom(
                   foregroundColor: const Color(0xFF00C4B4),
                 ),
               ),
+              dialogTheme: DialogThemeData(backgroundColor: Colors.white),
             ),
             child: child!,
           ),
@@ -254,11 +254,13 @@ class _AddHistoryDialogState extends State<AddHistoryDialog> {
           if (value == null || value.isEmpty) return "Diastolic BP is required";
           final diastolic = int.tryParse(value);
           if (diastolic == null) return "Must be a number";
-          if (diastolic < 30 || diastolic > 200)
+          if (diastolic < 30 || diastolic > 200) {
             return "Must be between 30-200";
+          }
           final systolic = int.tryParse(systolicController.text);
-          if (systolic != null && systolic <= diastolic)
+          if (systolic != null && systolic <= diastolic) {
             return "Systolic must be greater than Diastolic";
+          }
           return null;
         },
       ),
@@ -277,12 +279,14 @@ class _AddHistoryDialogState extends State<AddHistoryDialog> {
           Icons.air,
         ),
         validator: (value) {
-          if (value == null || value.isEmpty)
+          if (value == null || value.isEmpty) {
             return "Respiration Rate is required";
+          }
           final respiration = int.tryParse(value);
           if (respiration == null) return "Must be a number";
-          if (respiration < 5 || respiration > 50)
+          if (respiration < 5 || respiration > 50) {
             return "Must be between 5-50";
+          }
           return null;
         },
       ),

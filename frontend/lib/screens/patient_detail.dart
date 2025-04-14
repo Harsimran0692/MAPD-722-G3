@@ -24,6 +24,20 @@ class _PatientDetailState extends State<PatientDetail> {
   List<Map<String, dynamic>> patientHistory = []; // Dynamic history list
   bool isLoading = false; // Add loading state
 
+  // Validation constants
+  static const double minSystolic = 70; // Minimum reasonable systolic pressure
+  static const double maxSystolic = 250; // Maximum reasonable systolic pressure
+  static const double minDiastolic =
+      40; // Minimum reasonable diastolic pressure
+  static const double maxDiastolic =
+      150; // Maximum reasonable diastolic pressure
+  static const double minHeartRate = 30; // Minimum heart rate
+  static const double maxHeartRate = 200; // Maximum heart rate
+  static const double minRespiration = 5; // Minimum respiration rate
+  static const double maxRespiration = 60; // Maximum respiration rate
+  static const double minOxygen = 70; // Minimum blood oxygenation
+  static const double maxOxygen = 100; // Maximum blood oxygenation
+
   @override
   void initState() {
     super.initState();
@@ -76,38 +90,7 @@ class _PatientDetailState extends State<PatientDetail> {
 
   // Fetch updated patient data (clinical data) using the API
   Future<void> _fetchPatientData() async {
-    // print(_patients);
-    // setState(() {
-    //   isLoading = true; // Show loader
-    // });
-    // try {
-    //   final updatedData = await _patients.fetchPatientClinicalData(
-    //     patientData["patientId"]["_id"].toString(),
-    //   );
-    //   if (updatedData != null) {
-    //     updatedData["doctorNotes"] = updatedData["doctorNotes"] ?? [];
-    //     updatedData["status"] = _calculateStatus(updatedData);
-
-    //     setState(() {
-    //       patientData = updatedData;
-    //       isLoading = false; // Hide loader
-    //     });
-    //   } else {
-    //     setState(() {
-    //       isLoading = false; // Hide loader if no data
-    //     });
-    //     ScaffoldMessenger.of(
-    //       context,
-    //     ).showSnackBar(const SnackBar(content: Text("No clinical data found")));
-    //   }
-    // } catch (e) {
-    //   ScaffoldMessenger.of(context).showSnackBar(
-    //     SnackBar(content: Text("Error fetching patient data: $e")),
-    //   );
-    //   setState(() {
-    //     isLoading = false; // Hide loader on error
-    //   });
-    // }
+    // ... (unchanged, keeping it commented as per your code)
   }
 
   // Refresh both patient data and history
@@ -123,43 +106,33 @@ class _PatientDetailState extends State<PatientDetail> {
     final respiratory =
         data["respirationRate"] as num? ?? 0; // in breaths per minute
 
-    // Check for critical conditions first
-    if (systolic < 90 || // Severe hypotension
-        systolic > 180 || // Hypertensive crisis
-        diastolic < 50 || // Severe low diastolic
-        diastolic > 120 || // Hypertensive crisis
-        oxygen < 90 || // Severe hypoxemia
-        heartRate < 40 || // Severe bradycardia
-        heartRate > 130 || // Severe tachycardia
-        respiratory < 8 || // Bradypnea
+    if (systolic < 90 ||
+        systolic > 180 ||
+        diastolic < 50 ||
+        diastolic > 120 ||
+        oxygen < 90 ||
+        heartRate < 40 ||
+        heartRate > 130 ||
+        respiratory < 8 ||
         respiratory > 30) {
-      // Tachypnea
       return "Critical";
-    }
-    // Check for recovering conditions (elevated but not critical)
-    else if ((systolic >= 130 &&
-            systolic <= 180) || // Stage 1 or 2 hypertension
-        (diastolic >= 80 && diastolic <= 120) || // Elevated diastolic
-        (oxygen >= 90 && oxygen < 95) || // Mild hypoxemia
-        (respiratory >= 20 && respiratory <= 30) || // Elevated breathing rate
+    } else if ((systolic >= 130 && systolic <= 180) ||
+        (diastolic >= 80 && diastolic <= 120) ||
+        (oxygen >= 90 && oxygen < 95) ||
+        (respiratory >= 20 && respiratory <= 30) ||
         (respiratory >= 8 && respiratory < 12)) {
-      // Low breathing rate
       return "Recovering";
-    }
-    // If none of the above, patient is stable
-    else {
+    } else {
       return "Stable";
     }
   }
 
-  // Format date and time for display
   String formatDateTime(String? dateTimeStr) {
     if (dateTimeStr == null || dateTimeStr.isEmpty) return 'N/A';
     final dateTime = DateTime.parse(dateTimeStr);
     return "${dateTime.month}/${dateTime.day}/${dateTime.year} at ${dateTime.hour}:${dateTime.minute.toString().padLeft(2, '0')} ${dateTime.hour >= 12 ? 'PM' : 'AM'}";
   }
 
-  // Show confirmation dialog for deletion
   Future<void> _confirmDeletePatient(BuildContext context) async {
     final bool? confirmed = await showDialog<bool>(
       context: context,
@@ -210,7 +183,6 @@ class _PatientDetailState extends State<PatientDetail> {
     }
   }
 
-  // Delete clinical data
   Future<void> _deleteClinicalData() async {
     try {
       await _patients.deleteClinicalData(patientData["_id"].toString());
@@ -227,7 +199,6 @@ class _PatientDetailState extends State<PatientDetail> {
     }
   }
 
-  // Show dialog to edit clinical data
   void _showEditClinicalDataDialog(BuildContext context) {
     final systolicController = TextEditingController(
       text: patientData["systolicPressure"]?.toString() ?? "",
@@ -245,6 +216,8 @@ class _PatientDetailState extends State<PatientDetail> {
       text: patientData["heartRate"]?.toString() ?? "",
     );
 
+    final formKey = GlobalKey<FormState>(); // Form key for validation
+
     showDialog(
       context: context,
       builder:
@@ -254,43 +227,130 @@ class _PatientDetailState extends State<PatientDetail> {
               style: TextStyle(fontFamily: 'Poppins'),
             ),
             content: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  TextField(
-                    decoration: const InputDecoration(
-                      labelText: "Systolic Pressure",
+              child: Form(
+                key: formKey,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    TextFormField(
+                      decoration: const InputDecoration(
+                        labelText: "Systolic Pressure (mmHg)",
+                        errorStyle: TextStyle(color: Colors.red),
+                        border: OutlineInputBorder(),
+                      ),
+                      keyboardType: TextInputType.number,
+                      controller: systolicController,
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Systolic Pressure cannot be empty';
+                        }
+                        final numValue = num.tryParse(value);
+                        if (numValue == null) {
+                          return 'Systolic Pressure must be a number';
+                        }
+                        if (numValue < minSystolic || numValue > maxSystolic) {
+                          return 'Must be between $minSystolic and $maxSystolic mmHg';
+                        }
+                        return null;
+                      },
                     ),
-                    keyboardType: TextInputType.number,
-                    controller: systolicController,
-                  ),
-                  TextField(
-                    decoration: const InputDecoration(
-                      labelText: "Diastolic Pressure",
+                    const SizedBox(height: 10),
+                    TextFormField(
+                      decoration: const InputDecoration(
+                        labelText: "Diastolic Pressure (mmHg)",
+                        errorStyle: TextStyle(color: Colors.red),
+                        border: OutlineInputBorder(),
+                      ),
+                      keyboardType: TextInputType.number,
+                      controller: diastolicController,
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Diastolic Pressure cannot be empty';
+                        }
+                        final numValue = num.tryParse(value);
+                        if (numValue == null) {
+                          return 'Diastolic Pressure must be a number';
+                        }
+                        if (numValue < minDiastolic ||
+                            numValue > maxDiastolic) {
+                          return 'Diastolic Pressure must be between $minDiastolic and $maxDiastolic mmHg';
+                        }
+                        return null;
+                      },
                     ),
-                    keyboardType: TextInputType.number,
-                    controller: diastolicController,
-                  ),
-                  TextField(
-                    decoration: const InputDecoration(
-                      labelText: "Respiration Rate",
+                    const SizedBox(height: 10),
+                    TextFormField(
+                      decoration: const InputDecoration(
+                        labelText: "Respiration Rate (breaths/min)",
+                        errorStyle: TextStyle(color: Colors.red),
+                        border: OutlineInputBorder(),
+                      ),
+                      keyboardType: TextInputType.number,
+                      controller: respirationController,
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Respiration Rate cannot be empty';
+                        }
+                        final numValue = num.tryParse(value);
+                        if (numValue == null) {
+                          return 'Respiration Rate must be a number';
+                        }
+                        if (numValue < minRespiration ||
+                            numValue > maxRespiration) {
+                          return 'Respiration Rate must be between $minRespiration and $maxRespiration breaths/min';
+                        }
+                        return null;
+                      },
                     ),
-                    keyboardType: TextInputType.number,
-                    controller: respirationController,
-                  ),
-                  TextField(
-                    decoration: const InputDecoration(
-                      labelText: "Blood Oxygenation",
+                    const SizedBox(height: 10),
+                    TextFormField(
+                      decoration: const InputDecoration(
+                        labelText: "Blood Oxygenation (%)",
+                        errorStyle: TextStyle(color: Colors.red),
+                        border: OutlineInputBorder(),
+                      ),
+                      keyboardType: TextInputType.number,
+                      controller: oxygenController,
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Blood Oxygenation cannot be empty';
+                        }
+                        final numValue = num.tryParse(value);
+                        if (numValue == null) {
+                          return 'Blood Oxygenation must be a number';
+                        }
+                        if (numValue < minOxygen || numValue > maxOxygen) {
+                          return 'Blood Oxygenation must be between $minOxygen and $maxOxygen%';
+                        }
+                        return null;
+                      },
                     ),
-                    keyboardType: TextInputType.number,
-                    controller: oxygenController,
-                  ),
-                  TextField(
-                    decoration: const InputDecoration(labelText: "Heart Rate"),
-                    keyboardType: TextInputType.number,
-                    controller: heartController,
-                  ),
-                ],
+                    const SizedBox(height: 10),
+                    TextFormField(
+                      decoration: const InputDecoration(
+                        labelText: "Heart Rate (bpm)",
+                        errorStyle: TextStyle(color: Colors.red),
+                        border: OutlineInputBorder(),
+                      ),
+                      keyboardType: TextInputType.number,
+                      controller: heartController,
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Heart Rate cannot be empty';
+                        }
+                        final numValue = num.tryParse(value);
+                        if (numValue == null) {
+                          return 'Heart Rate must be a number';
+                        }
+                        if (numValue < minHeartRate ||
+                            numValue > maxHeartRate) {
+                          return 'Heart Rate must be between $minHeartRate and $maxHeartRate bpm';
+                        }
+                        return null;
+                      },
+                    ),
+                  ],
+                ),
               ),
             ),
             actions: [
@@ -299,15 +359,25 @@ class _PatientDetailState extends State<PatientDetail> {
                 child: const Text("Cancel"),
               ),
               ElevatedButton(
-                onPressed:
-                    () => _updateClinicalData(
+                onPressed: () {
+                  if (formKey.currentState!.validate()) {
+                    _updateClinicalData(
                       context,
                       systolicController,
                       diastolicController,
                       respirationController,
                       oxygenController,
                       heartController,
-                    ),
+                    );
+                  } else {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text("Please fix the errors in the form."),
+                        backgroundColor: Colors.red,
+                      ),
+                    );
+                  }
+                },
                 child: const Text("Save"),
               ),
             ],
@@ -343,7 +413,9 @@ class _PatientDetailState extends State<PatientDetail> {
         "diastolicPressure": num.tryParse(diastolicController.text),
         "bloodOxygenation": num.tryParse(oxygenController.text),
         "heartRate": num.tryParse(heartController.text),
-        "respirationRate": num.parse(respirationController.text),
+        "respirationRate": num.tryParse(
+          respirationController.text,
+        ), // Fixed potential error
       }),
       "updatedAt": DateTime.now().toString(),
     };
@@ -367,7 +439,6 @@ class _PatientDetailState extends State<PatientDetail> {
     }
   }
 
-  // Show dialog to edit doctor's note
   void _showUpdateNoteDialog(BuildContext context, dynamic note) {
     final noteController = TextEditingController(text: note["note"]);
     showDialog(
@@ -403,7 +474,6 @@ class _PatientDetailState extends State<PatientDetail> {
     );
   }
 
-  // Show dialog to edit history
   void _showEditHistoryDialog(
     BuildContext context,
     Map<String, dynamic> history,
@@ -536,11 +606,11 @@ class _PatientDetailState extends State<PatientDetail> {
     };
 
     try {
-      final response = await _patients.addPatientHistory(
+      await _patients.addPatientHistory(
         patientId: patientData["patientId"]["_id"].toString(),
         historyData: historyData,
       );
-      await _fetchHistoryData(); // Refresh history after adding
+      await _fetchHistoryData();
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("History added successfully")),
       );
@@ -596,7 +666,7 @@ class _PatientDetailState extends State<PatientDetail> {
         historyId: historyId,
         historyData: updatedHistory,
       );
-      await _fetchHistoryData(); // Refresh history after update
+      await _fetchHistoryData();
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("History updated successfully")),
       );
@@ -696,7 +766,7 @@ class _PatientDetailState extends State<PatientDetail> {
               child: Padding(
                 padding: const EdgeInsets.all(20.0),
                 child: RefreshIndicator(
-                  onRefresh: _onRefresh, // Trigger refresh
+                  onRefresh: _onRefresh,
                   color: const Color(0xFF00C4B4),
                   child: SingleChildScrollView(
                     physics: const AlwaysScrollableScrollPhysics(),
@@ -928,7 +998,11 @@ class _PatientDetailState extends State<PatientDetail> {
                                                   ),
                                                 _buildHistoryDetail(
                                                   "Updated At",
-                                                  "${formatDateTime(history["updatedAt"] as String?) ?? 'N/A'}",
+                                                  formatDateTime(
+                                                        history["updatedAt"]
+                                                            as String?,
+                                                      ) ??
+                                                      'N/A',
                                                   Colors.orange,
                                                 ),
                                               ],
@@ -1000,7 +1074,7 @@ class _PatientDetailState extends State<PatientDetail> {
           ),
           if (isLoading)
             Container(
-              color: Colors.black.withOpacity(0.5), // Semi-transparent overlay
+              color: Colors.black.withOpacity(0.5),
               child: const Center(
                 child: CircularProgressIndicator(color: Color(0xFF00C4B4)),
               ),
@@ -1010,7 +1084,6 @@ class _PatientDetailState extends State<PatientDetail> {
     );
   }
 
-  // Helper methods for the section
   Widget _buildHistoryDetail(String label, String value, Color color) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4.0),

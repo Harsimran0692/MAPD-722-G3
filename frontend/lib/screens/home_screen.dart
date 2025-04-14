@@ -5,54 +5,58 @@ import 'package:frontend/screens/profile_screen.dart';
 import 'package:frontend/widgets/patient_card.dart';
 import 'package:frontend/widgets/add_patient.dart';
 
+// HomeScreen widget to display the main dashboard
 class HomeScreen extends StatefulWidget {
-  const HomeScreen({super.key});
+  const HomeScreen({super.key}); // Constructor for HomeScreen
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
+// State class for HomeScreen with animation support
 class _HomeScreenState extends State<HomeScreen>
     with SingleTickerProviderStateMixin {
-  final Patients patientService = Patients();
-  List<Map<String, dynamic>> patients = [];
-  List<Map<String, dynamic>> filteredPatients = [];
-  String filterStatus = "All";
-  String filterGender = "All";
-  String searchQuery = "";
-  RangeValues ageRange = const RangeValues(0, 100);
+  final Patients patientService = Patients(); // Service to fetch patient data
+  List<Map<String, dynamic>> patients = []; // List of all patients
+  List<Map<String, dynamic>> filteredPatients = []; // Filtered list of patients
+  String filterStatus = "All"; // Status filter state
+  String filterGender = "All"; // Gender filter state
+  String searchQuery = ""; // Search query state
+  RangeValues ageRange = const RangeValues(0, 100); // Age range filter state
 
-  String userName = "Dr. John Smith";
-  String userEmail = "john.smith@example.com";
+  String userName = "Dr. John Smith"; // User's name
+  String userEmail = "john.smith@example.com"; // User's email
   String userImage =
-      "https://www.gravatar.com/avatar/2c7d99fe281ecd3bcd65ab915bac6dd5?s=250";
+      "https://www.gravatar.com/avatar/2c7d99fe281ecd3bcd65ab915bac6dd5?s=250"; // User's profile image URL
 
-  int _selectedIndex = 1; // Default to "Home" (index 1)
-  late AnimationController _animationController;
-  late Animation<double> _fadeAnimation;
-  bool _isLoading = true;
+  int _selectedIndex =
+      1; // Current index for bottom navigation (default to Home)
+  late AnimationController _animationController; // Controller for animations
+  late Animation<double> _fadeAnimation; // Fade animation for UI elements
+  bool _isLoading = true; // Loading state indicator
 
   @override
   void initState() {
     super.initState();
+    // Initialize animation controller and start animation
     _animationController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 500),
     )..forward();
-
     _fadeAnimation = CurvedAnimation(
       parent: _animationController,
       curve: Curves.easeInOut,
     );
-    _fetchPatientsOnLoad();
+    _fetchPatientsOnLoad(); // Fetch patients when screen loads
   }
 
   @override
   void dispose() {
-    _animationController.dispose();
+    _animationController.dispose(); // Clean up animation controller
     super.dispose();
   }
 
+  // Fetch patients when screen loads and update loading state
   Future<void> _fetchPatientsOnLoad() async {
     setState(() {
       _isLoading = true;
@@ -63,13 +67,14 @@ class _HomeScreenState extends State<HomeScreen>
     });
   }
 
+  // Fetch patient data with clinical information from API
   Future<void> fetchPatientsClinical() async {
     try {
       final fetchedPatients = await patientService.fetchPatientsClinical();
       setState(() {
         patients = fetchedPatients;
         filteredPatients = List.from(patients);
-        filterPatients();
+        filterPatients(); // Apply filters after fetching
       });
     } catch (e) {
       print(e);
@@ -83,6 +88,7 @@ class _HomeScreenState extends State<HomeScreen>
     }
   }
 
+  // Filter patients based on status, gender, age, and search query
   void filterPatients() {
     setState(() {
       filteredPatients =
@@ -92,13 +98,11 @@ class _HomeScreenState extends State<HomeScreen>
             final matchesStatus =
                 filterStatus == "All" ||
                 patientStatus == filterStatus.toLowerCase();
-
             final patientGender =
                 patient["patientId"]?["gender"]?.toString().toLowerCase() ?? "";
             final matchesGender =
                 filterGender == "All" ||
                 patientGender == filterGender.toLowerCase();
-
             final patientDob = DateTime.tryParse(
               patient["patientId"]?["dob"] ?? "",
             );
@@ -106,18 +110,17 @@ class _HomeScreenState extends State<HomeScreen>
                 patientDob != null ? DateTime.now().year - patientDob.year : 0;
             final matchesAge =
                 patientAge >= ageRange.start && patientAge <= ageRange.end;
-
             final patientName =
                 patient["patientId"]?["name"]?.toString().toLowerCase() ?? "";
             final matchesName =
                 searchQuery.trim().isEmpty ||
                 patientName.contains(searchQuery.trim().toLowerCase());
-
             return matchesStatus && matchesGender && matchesAge && matchesName;
           }).toList();
     });
   }
 
+  // Show modal for advanced filtering options
   void showFilterModal() {
     String tempFilterStatus = filterStatus;
     String tempFilterGender = filterGender;
@@ -243,6 +246,7 @@ class _HomeScreenState extends State<HomeScreen>
     );
   }
 
+  // Build filter section widget for status or gender options
   Widget _buildFilterSection(
     String title,
     List<String> options,
@@ -298,6 +302,7 @@ class _HomeScreenState extends State<HomeScreen>
     );
   }
 
+  // Show dialog to add a new patient
   void showAddPatientDialog() {
     showModalBottomSheet(
       context: context,
@@ -313,6 +318,7 @@ class _HomeScreenState extends State<HomeScreen>
     );
   }
 
+  // Update user profile information
   void _onProfileUpdated(String newName, String newEmail) {
     setState(() {
       userName = newName;
@@ -320,11 +326,12 @@ class _HomeScreenState extends State<HomeScreen>
     });
   }
 
+  // Handle bottom navigation bar item taps
   void _onItemTapped(int index) {
     setState(() {
       _selectedIndex = index;
       if (index == 1) {
-        _fetchPatientsOnLoad();
+        _fetchPatientsOnLoad(); // Refresh patients when switching to Home
       }
     });
   }
@@ -333,16 +340,16 @@ class _HomeScreenState extends State<HomeScreen>
   Widget build(BuildContext context) {
     return Scaffold(
       body: IndexedStack(
-        index: _selectedIndex,
+        index: _selectedIndex, // Show the selected screen
         children: [
           ProfileScreen(
             userName: userName,
             userEmail: userEmail,
             userImage: userImage,
             onProfileUpdated: _onProfileUpdated,
-          ),
-          _buildHomeContent(),
-          PatientsScreen(patients: filteredPatients),
+          ), // Profile screen
+          _buildHomeContent(), // Home content
+          PatientsScreen(patients: filteredPatients), // Patients screen
         ],
       ),
       floatingActionButton:
@@ -357,7 +364,7 @@ class _HomeScreenState extends State<HomeScreen>
                 ),
                 child: const Icon(Icons.add, color: Colors.white, size: 32),
               )
-              : null,
+              : null, // FAB only on Patients screen
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _selectedIndex,
         onTap: _onItemTapped,
@@ -377,16 +384,17 @@ class _HomeScreenState extends State<HomeScreen>
     );
   }
 
+  // Build the content for the Home tab
   Widget _buildHomeContent() {
     if (_isLoading) {
       return const Center(
         child: CircularProgressIndicator(color: Colors.teal, strokeWidth: 4),
-      );
+      ); // Show loading spinner
     }
 
     return Column(
       children: [
-        // Fixed Header Section
+        // Header section with user info and search bar
         Container(
           decoration: const BoxDecoration(
             gradient: LinearGradient(
@@ -398,12 +406,7 @@ class _HomeScreenState extends State<HomeScreen>
           child: Column(
             children: [
               Padding(
-                padding: const EdgeInsets.fromLTRB(
-                  16,
-                  80,
-                  16,
-                  10,
-                ), // Adjusted padding for top bar
+                padding: const EdgeInsets.fromLTRB(16, 80, 16, 10),
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
@@ -525,12 +528,12 @@ class _HomeScreenState extends State<HomeScreen>
             ],
           ),
         ),
-        // Scrollable Patients Section
+        // Scrollable patient list section
         Expanded(
           child: Container(
             decoration: const BoxDecoration(color: Colors.white),
             child: RefreshIndicator(
-              onRefresh: fetchPatientsClinical,
+              onRefresh: fetchPatientsClinical, // Refresh patient data
               color: Colors.teal,
               child:
                   filteredPatients.isEmpty

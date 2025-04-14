@@ -344,11 +344,15 @@ class _AddClinicalDataScreenState extends State<AddClinicalDataScreen>
                                         icon: Icons.favorite,
                                         keyboardType: TextInputType.number,
                                         validator: (value) {
-                                          if (value == null || value.isEmpty)
+                                          if (value == null || value.isEmpty) {
                                             return "Systolic Pressure is required";
+                                          }
                                           final sp = int.tryParse(value);
-                                          if (sp == null || sp < 50 || sp > 250)
+                                          if (sp == null ||
+                                              sp < 50 ||
+                                              sp > 250) {
                                             return "Enter a valid value (50-250)";
+                                          }
                                           return null;
                                         },
                                       ),
@@ -361,11 +365,15 @@ class _AddClinicalDataScreenState extends State<AddClinicalDataScreen>
                                         icon: Icons.favorite_border,
                                         keyboardType: TextInputType.number,
                                         validator: (value) {
-                                          if (value == null || value.isEmpty)
+                                          if (value == null || value.isEmpty) {
                                             return "Diastolic Pressure is required";
+                                          }
                                           final dp = int.tryParse(value);
-                                          if (dp == null || dp < 30 || dp > 150)
+                                          if (dp == null ||
+                                              dp < 30 ||
+                                              dp > 150) {
                                             return "Enter a valid value (30-150)";
+                                          }
                                           return null;
                                         },
                                       ),
@@ -376,11 +384,15 @@ class _AddClinicalDataScreenState extends State<AddClinicalDataScreen>
                                         icon: Icons.monitor_heart,
                                         keyboardType: TextInputType.number,
                                         validator: (value) {
-                                          if (value == null || value.isEmpty)
+                                          if (value == null || value.isEmpty) {
                                             return "Heart Rate is required";
+                                          }
                                           final hr = int.tryParse(value);
-                                          if (hr == null || hr < 30 || hr > 200)
+                                          if (hr == null ||
+                                              hr < 30 ||
+                                              hr > 200) {
                                             return "Enter a valid value (30-200)";
+                                          }
                                           return null;
                                         },
                                       ),
@@ -392,11 +404,15 @@ class _AddClinicalDataScreenState extends State<AddClinicalDataScreen>
                                         icon: Icons.air,
                                         keyboardType: TextInputType.number,
                                         validator: (value) {
-                                          if (value == null || value.isEmpty)
+                                          if (value == null || value.isEmpty) {
                                             return "Respiration Rate is required";
+                                          }
                                           final rr = int.tryParse(value);
-                                          if (rr == null || rr < 12 || rr > 40)
+                                          if (rr == null ||
+                                              rr < 12 ||
+                                              rr > 40) {
                                             return "Enter a valid value (12-40)";
+                                          }
                                           return null;
                                         },
                                       ),
@@ -410,11 +426,15 @@ class _AddClinicalDataScreenState extends State<AddClinicalDataScreen>
                                               decimal: true,
                                             ),
                                         validator: (value) {
-                                          if (value == null || value.isEmpty)
+                                          if (value == null || value.isEmpty) {
                                             return "Blood Oxygenation is required";
+                                          }
                                           final bo = double.tryParse(value);
-                                          if (bo == null || bo < 70 || bo > 100)
+                                          if (bo == null ||
+                                              bo < 70 ||
+                                              bo > 100) {
                                             return "Enter a valid value (70-100)";
+                                          }
                                           return null;
                                         },
                                       ),
